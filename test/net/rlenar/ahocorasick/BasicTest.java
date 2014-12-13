@@ -14,11 +14,25 @@ import org.junit.rules.TestName;
 public class BasicTest {
 
 	public static void main(final String[] args) {
-		new BasicTest().testLiteral();
+		new BasicTest(true).testLiteral();
+		new BasicTest(true).testOverlap();
+		new BasicTest(true).testLongKeywords();
+		new BasicTest(true).testFullRandom();
+		new BasicTest(true).testFailureTransitions();
 	}
 
 	@Rule
 	public TestName name = new TestName();
+
+	private final boolean printTimesOnly;
+
+	public BasicTest() {
+		this(false);
+	}
+
+	private BasicTest(final boolean printTimesOnly) {
+		this.printTimesOnly = printTimesOnly;
+	}
 
 	@Test
 	public void testFailureTransitions() {
@@ -100,8 +114,12 @@ public class BasicTest {
 		for (int i = 0; i < 10000; i++) {
 			set.match(haystack, performanceListener);
 		}
-		System.out.println(haystack + " in " + name.getMethodName() + " searched (matches " + listener.count + ") in " + (System.nanoTime() - timeStart)
-				/ 10000 + "ns");
+		final long time = (System.nanoTime() - timeStart) / 10000;
+		if (printTimesOnly) {
+			System.out.println(time);
+		} else {
+			System.out.println(haystack + " in " + name.getMethodName() + " searched (matches " + listener.count + ") in " + time + "ns");
+		}
 		// Check count
 		final long countStartTime = System.nanoTime();
 		int normalCount = 0;
@@ -112,7 +130,9 @@ public class BasicTest {
 				}
 			}
 		}
-		System.out.println("Normal count completed in : " + (System.nanoTime() - countStartTime) + "ns");
+		if (!printTimesOnly) {
+			System.out.println("Normal count completed in : " + (System.nanoTime() - countStartTime) + "ns");
+		}
 		Assert.assertTrue("AC found " + listener.count + " normal match found " + normalCount, normalCount == listener.count);
 	}
 }
