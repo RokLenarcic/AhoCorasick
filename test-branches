@@ -3,15 +3,15 @@
 git checkout $0
 
 javac -d bin/net/rlenar/ahocorasick/ src/net/rlenar/ahocorasick/*
-javac -cp bin/net/rlenar/ahocorasick/;$JUNIT -d bin/net/rlenar/ahocorasick/ test/net/rlenar/ahocorasick/*
+javac -cp "bin/net/rlenar/ahocorasick/:$JUNIT" -d bin/net/rlenar/ahocorasick/ test/net/rlenar/ahocorasick/*
 
-java -cp bin/ net.rlenar.ahocorasick.BasicTest
+java -cp "bin/:$JUNIT" net.rlenar.ahocorasick.BasicTest
 
 git checkout $1
 
 javac -d bin/net/rlenar/ahocorasick/ src/net/rlenar/ahocorasick/*
-javac -cp bin/net/rlenar/ahocorasick/;$JUNIT -d bin/net/rlenar/ahocorasick/ test/net/rlenar/ahocorasick/*
+javac -cp "bin/net/rlenar/ahocorasick/:$JUNIT" -d bin/net/rlenar/ahocorasick/ test/net/rlenar/ahocorasick/*
 
-java -cp bin/ net.rlenar.ahocorasick.BasicTest
+java -cp "bin/:$JUNIT" net.rlenar.ahocorasick.BasicTest
 
 
