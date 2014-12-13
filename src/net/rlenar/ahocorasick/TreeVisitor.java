@@ -8,7 +8,5 @@ interface TreeVisitor<T> {
 
 	T visit(HashmapRootNode node);
 
-	T visit(LeafNode node);
-
 	T visit(TrieNode node);
 }

@@ -89,7 +89,6 @@ public class BasicTest {
 			}
 		}
 		final CountingMatchListener listener = new CountingMatchListener();
-		final CountingMatchListener optListener = new CountingMatchListener();
 		final MatchListener performanceListener = new MatchListener() {
 
 			public boolean match(final String word, final int endPosition) {
@@ -97,20 +96,12 @@ public class BasicTest {
 			}
 		};
 		set.match(haystack, listener);
-		long timeStart = System.nanoTime();
+		final long timeStart = System.nanoTime();
 		for (int i = 0; i < 10000; i++) {
 			set.match(haystack, performanceListener);
 		}
 		System.out.println(haystack + " in " + name.getMethodName() + " searched (matches " + listener.count + ") in " + (System.nanoTime() - timeStart)
 				/ 10000 + "ns");
-		set.optimize();
-		set.match(haystack, optListener);
-		timeStart = System.nanoTime();
-		for (int i = 0; i < 10000; i++) {
-			set.match(haystack, performanceListener);
-		}
-		System.out.println(haystack + " in " + name.getMethodName() + " opt. searched (matches " + optListener.count + ") in "
-				+ (System.nanoTime() - timeStart) / 10000 + "ns");
 		// Check count
 		final long countStartTime = System.nanoTime();
 		int normalCount = 0;
@@ -123,6 +114,5 @@ public class BasicTest {
 		}
 		System.out.println("Normal count completed in : " + (System.nanoTime() - countStartTime) + "ns");
 		Assert.assertTrue("AC found " + listener.count + " normal match found " + normalCount, normalCount == listener.count);
-		Assert.assertTrue("AC found " + listener.count + " opt AC found " + optListener.count, optListener.count == listener.count);
 	}
 }

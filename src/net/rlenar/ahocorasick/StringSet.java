@@ -1,7 +1,6 @@
 package net.rlenar.ahocorasick;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -58,12 +57,6 @@ public class StringSet {
 				break;
 			}
 		}
-	}
-
-	public void optimize() {
-		final Optimizer o = new Optimizer();
-		root = root.accept(o);
-		root.acceptRecursively(new FailTransitionFixer(o.swaps));
 	}
 
 	private List<Edge> flatten() {
@@ -261,10 +254,6 @@ public class StringSet {
 			return null;
 		}
 
-		public Void visit(final LeafNode node) {
-			throw new UnsupportedOperationException();
-		}
-
 		public Void visit(final TrieNode node) {
 			throw new UnsupportedOperationException();
 		}
@@ -283,35 +272,4 @@ public class StringSet {
 		}
 	}
 
-	private static class Optimizer extends Swapper {
-
-		Map<TrieNode, TrieNode> swaps = new HashMap<TrieNode, TrieNode>();
-
-		@Override
-		public TrieNode visit(final HashmapNode node) {
-			final char[] keys = new char[node.transitions.size()];
-			int keyIdx = 0;
-			TrieNode ret = null;
-			for (final Map.Entry<Character, TrieNode> en : node.transitions.entrySet()) {
-				keys[keyIdx++] = en.getKey();
-				en.setValue(en.getValue().accept(this));
-			}
-			Arrays.sort(keys);
-			if (keys.length == 0) {
-				ret = new LeafNode(node.failTransition, node.output);
-			}
-			if (ret == null) {
-				return node;
-			} else {
-				swaps.put(node, ret);
-				return ret;
-			}
-		}
-
-		@Override
-		public TrieNode visit(final HashmapRootNode node) {
-			return visit((HashmapNode) node);
-		}
-
-	}
 }

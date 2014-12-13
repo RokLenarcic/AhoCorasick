@@ -14,10 +14,6 @@ abstract class Swapper implements TreeVisitor<TrieNode> {
 
 	public abstract TrieNode visit(final HashmapRootNode node);
 
-	public final TrieNode visit(final LeafNode node) {
-		return null;
-	}
-
 	public final TrieNode visit(final TrieNode node) {
 		return null;
 	}
