@@ -1,13 +1,17 @@
 #!/bin/bash
 
-git checkout $0
+echo -e "Testing branch $1\n"
+
+git checkout $1
 
 javac -d bin/net/rlenar/ahocorasick/ src/net/rlenar/ahocorasick/*
 javac -cp "bin/net/rlenar/ahocorasick/:$JUNIT" -d bin/net/rlenar/ahocorasick/ test/net/rlenar/ahocorasick/*
 
 java -cp "bin/:$JUNIT" net.rlenar.ahocorasick.BasicTest
 
-git checkout $1
+echo -e "\nTesing branch $2\n"
+
+git checkout $2
 
 javac -d bin/net/rlenar/ahocorasick/ src/net/rlenar/ahocorasick/*
 javac -cp "bin/net/rlenar/ahocorasick/:$JUNIT" -d bin/net/rlenar/ahocorasick/ test/net/rlenar/ahocorasick/*
