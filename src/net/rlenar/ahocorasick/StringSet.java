@@ -8,7 +8,7 @@ import java.util.Map;
 
 public class StringSet {
 
-	TrieNode root = new HashmapRootNode();
+	TrieNode root = new HashmapNode();
 
 	public StringSet(final Iterable<String> keywords) {
 		// Add all keywords
@@ -30,32 +30,45 @@ public class StringSet {
 	public void match(final String haystack, final MatchListener listener) {
 
 		// Start with the root node.
-		TrieNode currentNode = root;
+		TrieNode currentNode = null;
 
-		int idx = 0;
+		int idx = -1;
 		// For each character.
 		final int len = haystack.length();
-		while (idx < len) {
-			final char c = haystack.charAt(idx);
-			// Try to transition from the current node using the character
-			TrieNode nextNode = currentNode.getTransition(c);
 
-			// If cannot transition, follow the fail transition until finding
-			// node X where you can transition to another node Y using this
-			// character. Take the transition.
-			while (nextNode == null) {
-				// Transition follow one fail transition
-				currentNode = currentNode.getFailTransition();
-				// See if you can transition to another node with this
-				// character.
-				nextNode = currentNode.getTransition(c);
+		OUTER: while (++idx < len) {
+			final char c = haystack.charAt(idx);
+			// If we're on a root node, just transition and roll around.
+			if (currentNode == null) {
+				currentNode = root.getTransition(c);
+			} else {
+				// Output any keyword on the current node
+				if (!currentNode.output(listener, idx)) {
+					return;
+				}
+
+				// Try to transition from the current node using the character
+				TrieNode nextNode = currentNode.getTransition(c);
+
+				// If cannot transition, follow the fail transition until finding node X where you can
+				// transition to another node Y using this character. Take the transition.
+				while (nextNode == null) {
+					// Transition follow one fail transition
+					currentNode = currentNode.getFailTransition();
+					if (currentNode == null) {
+						continue OUTER;
+					}
+					// See if you can transition to another node with this character.
+					nextNode = currentNode.getTransition(c);
+				}
+				// Take the transition.
+				currentNode = nextNode;
 			}
-			// Take the transition.
-			currentNode = nextNode;
-			// Output any keyword on the current node and increase the index
-			if (!currentNode.output(listener, ++idx)) {
-				break;
-			}
+		}
+
+		// Output any keyword on the current node
+		if (currentNode != null) {
+			currentNode.output(listener, len);
 		}
 	}
 
@@ -134,7 +147,9 @@ public class StringSet {
 
 		// this function is called in breadth-first fashion
 		public void init(final TrieNode parent, final char c) {
-
+			if (parent == null) {
+				return;
+			}
 			TrieNode failParent = parent.getFailTransition();
 			//
 			if (failParent == null) {
@@ -149,6 +164,9 @@ public class StringSet {
 						failTransition = matchContinuation;
 					} else {
 						failParent = failParent.getFailTransition();
+						if (failParent == null) {
+							return;
+						}
 					}
 				} while (failTransition == null);
 				if (output == null) {
@@ -171,40 +189,6 @@ public class StringSet {
 			}
 			return ret;
 
-		}
-
-	}
-
-	static final class HashmapRootNode extends HashmapNode {
-
-		@Override
-		public <T> T accept(final TreeVisitor<T> visitor) {
-			return visitor.visit(this);
-		}
-
-		@Override
-		public HashmapNode getFailTransition() {
-			return null;
-		}
-
-		@Override
-		public Keyword getOutput() {
-			return null;
-		}
-
-		@Override
-		public TrieNode getTransition(final char c) {
-			final TrieNode t = super.getTransition(c);
-			return t == null ? this : t;
-		}
-
-		@Override
-		public void init(final TrieNode parent, final char c) {
-		}
-
-		@Override
-		public boolean output(final MatchListener listener, final int idx) {
-			return true;
 		}
 
 	}
@@ -238,19 +222,6 @@ public class StringSet {
 				// to the first
 				node.output = new Keyword(keyword);
 			}
-			return null;
-		}
-
-		public Void visit(final HashmapRootNode node) {
-			// recursively travel the transitions, creating nodes
-			// as needed
-			TrieNode t = node.transitions.get(keyword.charAt(idx));
-			if (t == null) {
-				t = new HashmapNode();
-				node.transitions.put(keyword.charAt(idx), t);
-			}
-			idx++;
-			t.accept(this);
 			return null;
 		}
 
