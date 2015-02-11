@@ -1,5 +1,6 @@
 package net.rlenar.ahocorasick;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -13,7 +14,8 @@ import org.junit.rules.TestName;
 
 public class BasicTest {
 
-	public static void main(final String[] args) {
+	public static void main(final String[] args) throws IOException {
+		System.in.read();
 		new BasicTest(true).testLiteral();
 		new BasicTest(true).testOverlap();
 		new BasicTest(true).testLongKeywords();
