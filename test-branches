@@ -20,4 +20,4 @@ javac -cp "bin/:$JUNIT" -d bin/ test/net/rlenar/ahocorasick/*
 
 java -cp "bin/:$JUNIT" -Xverify:none net.rlenar.ahocorasick.BasicTest
 
-
+rm *.class
