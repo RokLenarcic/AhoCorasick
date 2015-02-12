@@ -6,7 +6,7 @@ git checkout $1
 
 rm -rf bin/*
 javac -d bin/ src/net/rlenar/ahocorasick/*
-javac -cp "bin/net/rlenar/ahocorasick/:$JUNIT" -d bin/ test/net/rlenar/ahocorasick/*
+javac -cp "bin/:$JUNIT" -d bin/ test/net/rlenar/ahocorasick/*
 
 java -cp "bin/:$JUNIT" net.rlenar.ahocorasick.BasicTest
 
@@ -16,7 +16,7 @@ git checkout $2
 
 rm -rf bin/*
 javac -d bin/ src/net/rlenar/ahocorasick/*
-javac -cp "bin/net/rlenar/ahocorasick/:$JUNIT" -d bin/ test/net/rlenar/ahocorasick/*
+javac -cp "bin/:$JUNIT" -d bin/ test/net/rlenar/ahocorasick/*
 
 java -cp "bin/:$JUNIT" net.rlenar.ahocorasick.BasicTest
 
