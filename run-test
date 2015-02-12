@@ -1,3 +1,0 @@
-#!/bin/sh
-
-java -cp /Users/rok/Applications/eclipse/plugins/org.junit_4.11.0.v201303080030/junit.jar:./bin net.rlenar.ahocorasick.BasicTest
