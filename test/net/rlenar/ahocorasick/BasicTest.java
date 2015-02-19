@@ -21,27 +21,27 @@ public class BasicTest {
 	public static void main(final String[] args) throws IOException {
 		System.in.read();
 		new BasicTest(true, 1000000).testLiteral();
-		System.out.println("" + OpenAddressMap.gets + "/" + OpenAddressMap.access);
+		System.out.println("" + ((float) OpenAddressMap.access) / ((float) OpenAddressMap.gets));
 		OpenAddressMap.gets = 0;
 		OpenAddressMap.access = 0;
 		new BasicTest(true, 1000000).testOverlap();
-		System.out.println("" + OpenAddressMap.gets + "/" + OpenAddressMap.access);
+		System.out.println("" + ((float) OpenAddressMap.access) / ((float) OpenAddressMap.gets));
 		OpenAddressMap.gets = 0;
 		OpenAddressMap.access = 0;
 		new BasicTest(true, 1000000).testLongKeywords();
-		System.out.println("" + OpenAddressMap.gets + "/" + OpenAddressMap.access);
+		System.out.println("" + ((float) OpenAddressMap.access) / ((float) OpenAddressMap.gets));
 		OpenAddressMap.gets = 0;
 		OpenAddressMap.access = 0;
 		new BasicTest(true, 1000000).testFullRandom();
-		System.out.println("" + OpenAddressMap.gets + "/" + OpenAddressMap.access);
+		System.out.println("" + ((float) OpenAddressMap.access) / ((float) OpenAddressMap.gets));
 		OpenAddressMap.gets = 0;
 		OpenAddressMap.access = 0;
 		new BasicTest(true, 1000000).testFailureTransitions();
-		System.out.println("" + OpenAddressMap.gets + "/" + OpenAddressMap.access);
+		System.out.println("" + ((float) OpenAddressMap.access) / ((float) OpenAddressMap.gets));
 		OpenAddressMap.gets = 0;
 		OpenAddressMap.access = 0;
 		new BasicTest(true, 1000000).testDictionary();
-		System.out.println("" + OpenAddressMap.gets + "/" + OpenAddressMap.access);
+		System.out.println("" + ((float) OpenAddressMap.access) / ((float) OpenAddressMap.gets));
 		OpenAddressMap.gets = 0;
 		OpenAddressMap.access = 0;
 	}
