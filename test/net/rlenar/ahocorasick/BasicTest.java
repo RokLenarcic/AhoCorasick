@@ -1,6 +1,10 @@
 package net.rlenar.ahocorasick;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -21,6 +25,7 @@ public class BasicTest {
 		new BasicTest(true).testLongKeywords();
 		new BasicTest(true).testFullRandom();
 		new BasicTest(true).testFailureTransitions();
+		new BasicTest(true).testDictionary();
 	}
 
 	@Rule
@@ -34,6 +39,28 @@ public class BasicTest {
 
 	private BasicTest(final boolean printTimesOnly) {
 		this.printTimesOnly = printTimesOnly;
+	}
+
+	@Test
+	public void testDictionary() throws IOException {
+		File dictFile = new File("/usr/share/dict/words");
+		if (dictFile.exists()) {
+			BufferedReader str = new BufferedReader(new FileReader(dictFile));
+			try {
+				List<String> words = new ArrayList<String>();
+				String word = null;
+				while ((word = str.readLine()) != null) {
+					words.add(word);
+				}
+				test("Values specified as nondelimited strings are interpreted according "
+						+ "their length. For a string 8 or 14 characters long, the year is assumed" + " to be given by the first 4 characters. Otherwise, the "
+						+ "year is assumed to be given by the first 2 characters. " + "The string is interpreted from left to right to find year,"
+						+ " month, day, hour, minute, and second values, for as many parts" + " as are present in the string. This means you should not use "
+						+ "strings that have fewer than 6 characters.", words.toArray(new String[words.size()]));
+			} finally {
+				str.close();
+			}
+		}
 	}
 
 	@Test
