@@ -5,6 +5,9 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 public class OpenAddressMap {
+	public static long access = 0;
+	public static long gets = 0;
+	public static boolean record = false;
 	private static final char EMPTY = 0xfffe;
 	private static final int HASH_BASIS = 0x811c9dc5;
 	private static final int HASH_PRIME = 16777619;
@@ -80,13 +83,19 @@ public class OpenAddressMap {
 	}
 
 	public TrieNode getOrDefault(char c) {
+		if (record) {
+			gets++;
+		}
 		int slot = hash(c) & (keys.length - 1);
 		if (keys[slot] == EMPTY) {
+			access++;
 			return def;
 		} else if (keys[slot] == c) {
+			access++;
 			return nodes[slot];
 		} else {
 			for (int i = slot + 1; i < keys.length; i++) {
+				access++;
 				if (keys[i] == EMPTY) {
 					return def;
 				} else if (keys[i] == c) {
@@ -94,6 +103,7 @@ public class OpenAddressMap {
 				}
 			}
 			for (int i = 0; i < slot; i++) {
+				access++;
 				if (keys[i] == EMPTY) {
 					return def;
 				} else if (keys[i] == c) {

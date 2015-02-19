@@ -21,11 +21,29 @@ public class BasicTest {
 	public static void main(final String[] args) throws IOException {
 		System.in.read();
 		new BasicTest(true, 1000000).testLiteral();
+		System.out.println("" + OpenAddressMap.gets + "/" + OpenAddressMap.access);
+		OpenAddressMap.gets = 0;
+		OpenAddressMap.access = 0;
 		new BasicTest(true, 1000000).testOverlap();
+		System.out.println("" + OpenAddressMap.gets + "/" + OpenAddressMap.access);
+		OpenAddressMap.gets = 0;
+		OpenAddressMap.access = 0;
 		new BasicTest(true, 1000000).testLongKeywords();
+		System.out.println("" + OpenAddressMap.gets + "/" + OpenAddressMap.access);
+		OpenAddressMap.gets = 0;
+		OpenAddressMap.access = 0;
 		new BasicTest(true, 1000000).testFullRandom();
+		System.out.println("" + OpenAddressMap.gets + "/" + OpenAddressMap.access);
+		OpenAddressMap.gets = 0;
+		OpenAddressMap.access = 0;
 		new BasicTest(true, 1000000).testFailureTransitions();
+		System.out.println("" + OpenAddressMap.gets + "/" + OpenAddressMap.access);
+		OpenAddressMap.gets = 0;
+		OpenAddressMap.access = 0;
 		new BasicTest(true, 1000000).testDictionary();
+		System.out.println("" + OpenAddressMap.gets + "/" + OpenAddressMap.access);
+		OpenAddressMap.gets = 0;
+		OpenAddressMap.access = 0;
 	}
 
 	@Rule
@@ -122,6 +140,7 @@ public class BasicTest {
 	}
 
 	private void test(final String haystack, final String... needles) {
+		OpenAddressMap.record = false;
 		final List<String> keywords = Arrays.asList(needles);
 		final StringSet set = new StringSet(keywords);
 		class CountingMatchListener implements MatchListener {
@@ -143,11 +162,13 @@ public class BasicTest {
 				return true;
 			}
 		};
+		OpenAddressMap.record = true;
 		set.match(haystack, listener);
 		final long timeStart = System.nanoTime();
 		for (int i = 0; i < testLoopSize; i++) {
 			set.match(haystack, performanceListener);
 		}
+		OpenAddressMap.record = false;
 		final long time = (System.nanoTime() - timeStart) / testLoopSize;
 		if (printTimesOnly) {
 			System.out.println(time);
