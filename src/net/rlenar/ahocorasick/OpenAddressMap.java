@@ -6,8 +6,10 @@ import java.util.NoSuchElementException;
 
 public class OpenAddressMap {
 	public static long access = 0;
+	public static long capacityAll = 0;
 	public static long gets = 0;
 	public static boolean record = false;
+	public static long sizeAll = 0;
 	private static final char EMPTY = 0xfffe;
 	private static final int HASH_BASIS = 0x811c9dc5;
 	private static final int HASH_PRIME = 16777619;
@@ -23,6 +25,8 @@ public class OpenAddressMap {
 	}
 
 	public <T> Iterator<T> forEach(final EntryVisitor<T> visitor) {
+		capacityAll += keys.length;
+		sizeAll += size;
 		return new Iterator<T>() {
 
 			private T bank = null;
