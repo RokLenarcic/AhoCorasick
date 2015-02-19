@@ -1,10 +1,10 @@
 package net.rlenar.ahocorasick;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+
+import net.rlenar.ahocorasick.OpenAddressMap.EntryVisitor;
 
 public class StringSet {
 
@@ -77,10 +77,10 @@ public class StringSet {
 
 		TrieNode failTransition;
 		Keyword output;
-		final Map<Character, TrieNode> transitions;
+		OpenAddressMap transitions;
 
-		private HashmapNode() {
-			transitions = new HashMap<Character, TrieNode>();
+		protected HashmapNode() {
+			transitions = new OpenAddressMap(null);
 		}
 
 		public <T> T accept(final TreeVisitor<T> visitor) {
@@ -90,8 +90,14 @@ public class StringSet {
 		public <T> List<T> acceptRecursively(final TreeVisitor<T> visitor) {
 			final List<T> ret = new ArrayList<T>();
 			ret.add(visitor.visit(this));
-			for (final Map.Entry<Character, TrieNode> n : transitions.entrySet()) {
-				ret.addAll(n.getValue().acceptRecursively(visitor));
+			Iterator<List<T>> iter = transitions.forEach(new EntryVisitor<List<T>>() {
+				public List<T> visit(char key, TrieNode value) {
+					return value.acceptRecursively(visitor);
+				}
+
+			});
+			while (iter.hasNext()) {
+				ret.addAll(iter.next());
 			}
 			return ret;
 		}
@@ -100,22 +106,13 @@ public class StringSet {
 		// return default transitions.
 		public Iterator<Edge> getEdges() {
 			// Iterator that simply supplies edge objects from hashmap entries.
-			return new Iterator<Edge>() {
+			return transitions.forEach(new EntryVisitor<Edge>() {
 
-				private final Iterator<Map.Entry<Character, TrieNode>> iter = transitions.entrySet().iterator();
-
-				public boolean hasNext() {
-					return iter.hasNext();
+				public Edge visit(char key, TrieNode value) {
+					return new Edge(HashmapNode.this, value, key);
 				}
 
-				public Edge next() {
-					final Map.Entry<Character, TrieNode> entry = iter.next();
-					return new Edge(HashmapNode.this, entry.getValue(), entry.getKey());
-				}
-
-				public void remove() {
-				}
-			};
+			});
 		}
 
 		// Get fail transition
@@ -129,7 +126,7 @@ public class StringSet {
 		}
 
 		public TrieNode getTransition(final char c) {
-			return transitions.get(c);
+			return transitions.getOrDefault(c);
 		}
 
 		// this function is called in breadth-first fashion
@@ -177,6 +174,10 @@ public class StringSet {
 
 	static final class HashmapRootNode extends HashmapNode {
 
+		public HashmapRootNode() {
+			this.transitions = new OpenAddressMap(this);
+		}
+
 		@Override
 		public <T> T accept(final TreeVisitor<T> visitor) {
 			return visitor.visit(this);
@@ -190,12 +191,6 @@ public class StringSet {
 		@Override
 		public Keyword getOutput() {
 			return null;
-		}
-
-		@Override
-		public TrieNode getTransition(final char c) {
-			final TrieNode t = super.getTransition(c);
-			return t == null ? this : t;
 		}
 
 		@Override
