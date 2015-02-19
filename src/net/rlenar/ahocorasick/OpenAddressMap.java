@@ -119,7 +119,7 @@ public class OpenAddressMap {
 	}
 
 	public TrieNode put(char c, TrieNode value) {
-		if (++size > keys.length * threshold) {
+		if (keys.length < 0x10000 && ++size > keys.length * threshold) {
 			enlarge();
 			++size;
 		}
