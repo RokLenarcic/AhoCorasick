@@ -92,14 +92,20 @@ public class OpenAddressMap {
 		}
 		int slot = hash(c) & (keys.length - 1);
 		if (keys[slot] == EMPTY) {
-			access++;
+			if (record) {
+				access++;
+			}
 			return def;
 		} else if (keys[slot] == c) {
-			access++;
+			if (record) {
+				access++;
+			}
 			return nodes[slot];
 		} else {
 			for (int i = slot + 1; i < keys.length; i++) {
-				access++;
+				if (record) {
+					access++;
+				}
 				if (keys[i] == EMPTY) {
 					return def;
 				} else if (keys[i] == c) {
@@ -107,7 +113,9 @@ public class OpenAddressMap {
 				}
 			}
 			for (int i = 0; i < slot; i++) {
-				access++;
+				if (record) {
+					access++;
+				}
 				if (keys[i] == EMPTY) {
 					return def;
 				} else if (keys[i] == c) {
