@@ -121,6 +121,9 @@ public class OpenAddressMap {
 					return nodes[i];
 				}
 			}
+			if (record) {
+				access++;
+			}
 			return def;
 		}
 	}
