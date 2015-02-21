@@ -17,7 +17,7 @@ public class OpenAddressMap {
 	private char[] keys = new char[2];
 	private TrieNode[] nodes = new TrieNode[2];
 	private int size = 0;
-	private float threshold = 0.75f;
+	private float threshold = 0.95f;
 
 	public OpenAddressMap(TrieNode def) {
 		Arrays.fill(keys, EMPTY);
