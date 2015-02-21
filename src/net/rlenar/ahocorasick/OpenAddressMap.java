@@ -14,10 +14,9 @@ public class OpenAddressMap {
 	private static final int HASH_BASIS = 0x811c9dc5;
 	private static final int HASH_PRIME = 16777619;
 	private TrieNode def = null;
-	private char[] keys = new char[2];
-	private TrieNode[] nodes = new TrieNode[2];
+	private char[] keys = new char[1];
+	private TrieNode[] nodes = new TrieNode[1];
 	private int size = 0;
-	private float threshold = 0.95f;
 
 	public OpenAddressMap(TrieNode def) {
 		Arrays.fill(keys, EMPTY);
@@ -82,7 +81,7 @@ public class OpenAddressMap {
 					return nodes[i];
 				}
 			}
-			throw new IllegalStateException();
+			return null;
 		}
 	}
 
@@ -122,15 +121,15 @@ public class OpenAddressMap {
 					return nodes[i];
 				}
 			}
-			throw new IllegalStateException();
+			return def;
 		}
 	}
 
 	public TrieNode put(char c, TrieNode value) {
-		if (keys.length < 0x10000 && ++size > keys.length * threshold) {
+		if (keys.length < 0x10000 && ((size + 1 > keys.length) || (size > 256 && (size + 1 > keys.length * 0.85f)))) {
 			enlarge();
-			++size;
 		}
+		++size;
 		int slot = hash(c) & (keys.length - 1);
 		for (int i = slot; i < keys.length; i++) {
 			if (keys[i] == EMPTY) {
