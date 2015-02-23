@@ -148,12 +148,7 @@ public class BasicTest {
 		for (int i = 0; i < testLoopSize; i++) {
 			set.match(haystack, performanceListener);
 		}
-<<<<<<< HEAD
-		OpenAddressMap.record = false;
 		final long time = (System.nanoTime() - timeStart) / testLoopSize;
-=======
-		final long time = (System.nanoTime() - timeStart) / 10000;
->>>>>>> Made adjustements to open map implementation.
 		if (printTimesOnly) {
 			System.out.println(time);
 		} else {

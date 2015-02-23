@@ -56,23 +56,20 @@ public class OpenAddressMap {
 
 	public TrieNode get(char c) {
 		int slot = hash(c) & mask;
-		if (keys[slot] == EMPTY) {
+		char keyInSlot = keys[slot];
+		if (keyInSlot == EMPTY) {
 			return null;
-		} else if (keys[slot] == c) {
+		} else if (keyInSlot == c) {
 			return nodes[slot];
 		} else {
-			for (int i = slot + 1; i < keys.length; i++) {
-				if (keys[i] == EMPTY) {
+			int maxI = slot + mask;
+			for (int i = slot + 1; i <= maxI; i++) {
+				int alternativeSlot = i & mask;
+				char keyInAlternativeSlot = keys[alternativeSlot];
+				if (keyInAlternativeSlot == EMPTY) {
 					return null;
-				} else if (keys[i] == c) {
-					return nodes[i];
-				}
-			}
-			for (int i = 0; i < slot; i++) {
-				if (keys[i] == EMPTY) {
-					return null;
-				} else if (keys[i] == c) {
-					return nodes[i];
+				} else if (keyInAlternativeSlot == c) {
+					return nodes[alternativeSlot];
 				}
 			}
 			return null;
