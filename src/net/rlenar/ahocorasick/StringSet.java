@@ -1,14 +1,14 @@
 package net.rlenar.ahocorasick;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-
-import net.rlenar.ahocorasick.OpenAddressMap.EntryVisitor;
+import java.util.NoSuchElementException;
 
 public class StringSet {
 
-	TrieNode root = new HashmapRootNode();
+	TrieNode root = new HashmapNode(true);
 
 	public StringSet(final Iterable<String> keywords) {
 		// Add all keywords
@@ -75,12 +75,19 @@ public class StringSet {
 
 	static class HashmapNode implements TrieNode {
 
+		private static final char EMPTY = 0xfffe;
+
 		TrieNode failTransition;
 		Keyword output;
-		OpenAddressMap transitions;
+		private TrieNode def = null;
+		private char[] keys = new char[1];
+		private int mask = keys.length - 1;
+		private TrieNode[] nodes = new TrieNode[1];
+		private int size = 0;
 
-		protected HashmapNode() {
-			transitions = new OpenAddressMap(null);
+		protected HashmapNode(boolean root) {
+			Arrays.fill(keys, EMPTY);
+			this.def = root ? this : null;
 		}
 
 		public <T> T accept(final TreeVisitor<T> visitor) {
@@ -90,7 +97,7 @@ public class StringSet {
 		public <T> List<T> acceptRecursively(final TreeVisitor<T> visitor) {
 			final List<T> ret = new ArrayList<T>();
 			ret.add(visitor.visit(this));
-			Iterator<List<T>> iter = transitions.forEach(new EntryVisitor<List<T>>() {
+			Iterator<List<T>> iter = forEach(new EntryVisitor<List<T>>() {
 				public List<T> visit(char key, TrieNode value) {
 					return value.acceptRecursively(visitor);
 				}
@@ -102,11 +109,62 @@ public class StringSet {
 			return ret;
 		}
 
+		public <T> Iterator<T> forEach(final EntryVisitor<T> visitor) {
+			return new Iterator<T>() {
+
+				private T bank = null;
+				private int i = -1;
+				private Boolean next = null;
+
+				public boolean hasNext() {
+					if (next == null) {
+						while (++i != keys.length) {
+							if (nodes[i] != null) {
+								bank = visitor.visit(keys[i], nodes[i]);
+								next = Boolean.TRUE;
+								return next;
+							}
+						}
+						next = Boolean.FALSE;
+					}
+					return next;
+				}
+
+				public T next() {
+					if (hasNext()) {
+						next = null;
+						return bank;
+					}
+					throw new NoSuchElementException();
+				}
+
+				public void remove() {
+					throw new IllegalArgumentException();
+				}
+			};
+		}
+
+		public TrieNode get(char c) {
+			int slot = hash(c) & mask;
+			int currentSlot = slot;
+			do {
+				char keyInSlot = keys[currentSlot];
+				if (keyInSlot == EMPTY) {
+					return null;
+				} else if (keyInSlot == c) {
+					return nodes[currentSlot];
+				} else {
+					currentSlot = ++currentSlot & mask;
+				}
+			} while (currentSlot != slot);
+			return null;
+		}
+
 		// Get edges leading out of the node. Root node doesn't
 		// return default transitions.
 		public Iterator<Edge> getEdges() {
 			// Iterator that simply supplies edge objects from hashmap entries.
-			return transitions.forEach(new EntryVisitor<Edge>() {
+			return forEach(new EntryVisitor<Edge>() {
 
 				public Edge visit(char key, TrieNode value) {
 					return new Edge(HashmapNode.this, value, key);
@@ -126,12 +184,26 @@ public class StringSet {
 		}
 
 		public TrieNode getTransition(final char c) {
-			return transitions.getOrDefault(c);
+			int slot = hash(c) & mask;
+			int currentSlot = slot;
+			do {
+				char keyInSlot = keys[currentSlot];
+				if (keyInSlot == EMPTY) {
+					return def;
+				} else if (keyInSlot == c) {
+					return nodes[currentSlot];
+				} else {
+					currentSlot = ++currentSlot & mask;
+				}
+			} while (currentSlot != slot);
+			return def;
 		}
 
 		// this function is called in breadth-first fashion
 		public void init(final TrieNode parent, final char c) {
-
+			if (parent == null) {
+				return;
+			}
 			TrieNode failParent = parent.getFailTransition();
 			//
 			if (failParent == null) {
@@ -170,36 +242,61 @@ public class StringSet {
 
 		}
 
-	}
-
-	static final class HashmapRootNode extends HashmapNode {
-
-		public HashmapRootNode() {
-			this.transitions = new OpenAddressMap(this);
+		public TrieNode put(char c, TrieNode value) {
+			if (keys.length < 0x10000 && ((size + 1 > keys.length) || (size > 16 && (size + 1 > keys.length * 0.90f)))) {
+				enlarge();
+			}
+			++size;
+			int slot = hash(c) & mask;
+			for (int i = slot; i < keys.length; i++) {
+				if (keys[i] == EMPTY) {
+					keys[i] = c;
+					nodes[i] = value;
+					return null;
+				} else if (keys[i] == c) {
+					keys[i] = c;
+					TrieNode ret = nodes[i];
+					nodes[i] = value;
+					return ret;
+				}
+			}
+			for (int i = 0; i < slot; i++) {
+				if (keys[i] == EMPTY) {
+					keys[i] = c;
+					nodes[i] = value;
+					return null;
+				} else if (keys[i] == c) {
+					TrieNode ret = nodes[i];
+					nodes[i] = value;
+					return ret;
+				}
+			}
+			throw new IllegalStateException();
 		}
 
-		@Override
-		public <T> T accept(final TreeVisitor<T> visitor) {
-			return visitor.visit(this);
+		private void enlarge() {
+			char[] oldKeysArray = keys;
+			TrieNode[] oldNodesArray = nodes;
+			keys = new char[oldKeysArray.length * 2];
+			mask = keys.length - 1;
+			Arrays.fill(keys, EMPTY);
+			nodes = new TrieNode[oldNodesArray.length * 2];
+			size = 0;
+			for (int i = 0; i < oldKeysArray.length; i++) {
+				if (oldKeysArray[i] != EMPTY) {
+					this.put(oldKeysArray[i], oldNodesArray[i]);
+				}
+			}
 		}
 
-		@Override
-		public HashmapNode getFailTransition() {
-			return null;
+		private int hash(char c) {
+			// HASH_BASIS = 0x811c9dc5;
+			// HASH_PRIME = 16777619;
+			return (((0x811c9dc5 ^ (c >> 8)) * 16777619) ^ (c & 0xff)) * 16777619;
 		}
 
-		@Override
-		public Keyword getOutput() {
-			return null;
-		}
-
-		@Override
-		public void init(final TrieNode parent, final char c) {
-		}
-
-		@Override
-		public boolean output(final MatchListener listener, final int idx) {
-			return true;
+		public interface EntryVisitor<T> {
+			T visit(char key, TrieNode value);
 		}
 
 	}
@@ -218,10 +315,10 @@ public class StringSet {
 			if (keyword.length() > idx) {
 				// recursively travel the transitions, creating nodes
 				// as needed
-				TrieNode t = node.transitions.get(keyword.charAt(idx));
+				TrieNode t = node.get(keyword.charAt(idx));
 				if (t == null) {
-					t = new HashmapNode();
-					node.transitions.put(keyword.charAt(idx), t);
+					t = new HashmapNode(false);
+					node.put(keyword.charAt(idx), t);
 				}
 				idx++;
 				t.accept(this);
@@ -233,19 +330,6 @@ public class StringSet {
 				// to the first
 				node.output = new Keyword(keyword);
 			}
-			return null;
-		}
-
-		public Void visit(final HashmapRootNode node) {
-			// recursively travel the transitions, creating nodes
-			// as needed
-			TrieNode t = node.transitions.get(keyword.charAt(idx));
-			if (t == null) {
-				t = new HashmapNode();
-				node.transitions.put(keyword.charAt(idx), t);
-			}
-			idx++;
-			t.accept(this);
 			return null;
 		}
 
