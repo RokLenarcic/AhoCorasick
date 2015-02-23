@@ -14,8 +14,8 @@ public class OpenAddressMap {
 	private static final int HASH_BASIS = 0x811c9dc5;
 	private static final int HASH_PRIME = 16777619;
 	private TrieNode def = null;
-	private char[] keys = new char[1];
-	private TrieNode[] nodes = new TrieNode[1];
+	private char[] keys = new char[2];
+	private TrieNode[] nodes = new TrieNode[2];
 	private int size = 0;
 
 	public OpenAddressMap(TrieNode def) {
