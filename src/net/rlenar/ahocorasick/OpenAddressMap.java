@@ -14,9 +14,9 @@ public class OpenAddressMap {
 	private static final int HASH_BASIS = 0x811c9dc5;
 	private static final int HASH_PRIME = 16777619;
 	private TrieNode def = null;
-	private char[] keys = new char[2];
+	private char[] keys = new char[1];
 	private int mask = keys.length - 1;
-	private TrieNode[] nodes = new TrieNode[2];
+	private TrieNode[] nodes = new TrieNode[1];
 	private int size = 0;
 
 	public OpenAddressMap(TrieNode def) {
@@ -91,35 +91,29 @@ public class OpenAddressMap {
 			gets++;
 		}
 		int slot = hash(c) & mask;
-		if (keys[slot] == EMPTY) {
+		char keyInSlot = keys[slot];
+		if (keyInSlot == EMPTY) {
 			if (record) {
 				access++;
 			}
 			return def;
-		} else if (keys[slot] == c) {
+		} else if (keyInSlot == c) {
 			if (record) {
 				access++;
 			}
 			return nodes[slot];
 		} else {
-			for (int i = slot + 1; i < keys.length; i++) {
+			int maxI = slot + mask;
+			for (int i = slot + 1; i <= maxI; i++) {
 				if (record) {
 					access++;
 				}
-				if (keys[i] == EMPTY) {
+				int alternativeSlot = i & mask;
+				char keyInAlternativeSlot = keys[alternativeSlot];
+				if (keyInAlternativeSlot == EMPTY) {
 					return def;
-				} else if (keys[i] == c) {
-					return nodes[i];
-				}
-			}
-			for (int i = 0; i < slot; i++) {
-				if (record) {
-					access++;
-				}
-				if (keys[i] == EMPTY) {
-					return def;
-				} else if (keys[i] == c) {
-					return nodes[i];
+				} else if (keyInAlternativeSlot == c) {
+					return nodes[alternativeSlot];
 				}
 			}
 			if (record) {
