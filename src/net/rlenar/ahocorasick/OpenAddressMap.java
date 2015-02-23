@@ -59,10 +59,10 @@ public class OpenAddressMap {
 		int currentSlot = slot;
 		do {
 			char keyInSlot = keys[currentSlot];
-			if (keyInSlot == c) {
-				return nodes[currentSlot];
-			} else if (keyInSlot == EMPTY) {
+			if (keyInSlot == EMPTY) {
 				return null;
+			} else if (keyInSlot == c) {
+				return nodes[currentSlot];
 			} else {
 				currentSlot = ++currentSlot & mask;
 			}
@@ -75,10 +75,10 @@ public class OpenAddressMap {
 		int currentSlot = slot;
 		do {
 			char keyInSlot = keys[currentSlot];
-			if (keyInSlot == c) {
-				return nodes[currentSlot];
-			} else if (keyInSlot == EMPTY) {
+			if (keyInSlot == EMPTY) {
 				return def;
+			} else if (keyInSlot == c) {
+				return nodes[currentSlot];
 			} else {
 				currentSlot = ++currentSlot & mask;
 			}
