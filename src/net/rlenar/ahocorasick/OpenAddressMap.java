@@ -58,9 +58,10 @@ public class OpenAddressMap {
 		int slot = hash(c) & mask;
 		int currentSlot = slot;
 		do {
-			if (keys[currentSlot] == c) {
+			char keyInSlot = keys[currentSlot];
+			if (keyInSlot == c) {
 				return nodes[currentSlot];
-			} else if (nodes[currentSlot] == null) {
+			} else if (keyInSlot == EMPTY) {
 				return null;
 			} else {
 				currentSlot = ++currentSlot & mask;
@@ -73,9 +74,10 @@ public class OpenAddressMap {
 		int slot = hash(c) & mask;
 		int currentSlot = slot;
 		do {
-			if (keys[currentSlot] == c) {
+			char keyInSlot = keys[currentSlot];
+			if (keyInSlot == c) {
 				return nodes[currentSlot];
-			} else if (nodes[currentSlot] == null) {
+			} else if (keyInSlot == EMPTY) {
 				return def;
 			} else {
 				currentSlot = ++currentSlot & mask;
