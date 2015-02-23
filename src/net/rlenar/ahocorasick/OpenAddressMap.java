@@ -56,46 +56,34 @@ public class OpenAddressMap {
 
 	public TrieNode get(char c) {
 		int slot = hash(c) & mask;
-		char keyInSlot = keys[slot];
-		if (keyInSlot == EMPTY) {
-			return null;
-		} else if (keyInSlot == c) {
-			return nodes[slot];
-		} else {
-			int maxI = slot + mask;
-			for (int i = slot + 1; i <= maxI; i++) {
-				int alternativeSlot = i & mask;
-				char keyInAlternativeSlot = keys[alternativeSlot];
-				if (keyInAlternativeSlot == EMPTY) {
-					return null;
-				} else if (keyInAlternativeSlot == c) {
-					return nodes[alternativeSlot];
-				}
+		int currentSlot = slot;
+		do {
+			char keyInSlot = keys[currentSlot];
+			if (keyInSlot == EMPTY) {
+				return null;
+			} else if (keyInSlot == c) {
+				return nodes[currentSlot];
+			} else {
+				currentSlot = ++currentSlot & mask;
 			}
-			return null;
-		}
+		} while (currentSlot != slot);
+		return null;
 	}
 
 	public TrieNode getOrDefault(char c) {
 		int slot = hash(c) & mask;
-		char keyInSlot = keys[slot];
-		if (keyInSlot == EMPTY) {
-			return def;
-		} else if (keyInSlot == c) {
-			return nodes[slot];
-		} else {
-			int maxI = slot + mask;
-			for (int i = slot + 1; i <= maxI; i++) {
-				int alternativeSlot = i & mask;
-				char keyInAlternativeSlot = keys[alternativeSlot];
-				if (keyInAlternativeSlot == EMPTY) {
-					return def;
-				} else if (keyInAlternativeSlot == c) {
-					return nodes[alternativeSlot];
-				}
+		int currentSlot = slot;
+		do {
+			char keyInSlot = keys[currentSlot];
+			if (keyInSlot == EMPTY) {
+				return def;
+			} else if (keyInSlot == c) {
+				return nodes[currentSlot];
+			} else {
+				currentSlot = ++currentSlot & mask;
 			}
-			return def;
-		}
+		} while (currentSlot != slot);
+		return def;
 	}
 
 	public TrieNode put(char c, TrieNode value) {
