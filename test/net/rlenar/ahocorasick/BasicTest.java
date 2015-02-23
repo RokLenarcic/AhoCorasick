@@ -20,25 +20,27 @@ public class BasicTest {
 
 	public static void main(final String[] args) throws IOException {
 		System.in.read();
-		new BasicTest(true).testLiteral();
-		new BasicTest(true).testOverlap();
-		new BasicTest(true).testLongKeywords();
-		new BasicTest(true).testFullRandom();
-		new BasicTest(true).testFailureTransitions();
-		new BasicTest(true).testDictionary();
+		new BasicTest(true, 1000000).testLiteral();
+		new BasicTest(true, 1000000).testOverlap();
+		new BasicTest(true, 1000000).testLongKeywords();
+		new BasicTest(true, 1000000).testFullRandom();
+		new BasicTest(true, 1000000).testFailureTransitions();
+		new BasicTest(true, 1000000).testDictionary();
 	}
 
 	@Rule
 	public TestName name = new TestName();
 
 	private final boolean printTimesOnly;
+	private int testLoopSize = 10000;
 
 	public BasicTest() {
-		this(false);
+		this(false, 10000);
 	}
 
-	private BasicTest(final boolean printTimesOnly) {
+	private BasicTest(final boolean printTimesOnly, int testLoopSize) {
 		this.printTimesOnly = printTimesOnly;
+		this.testLoopSize = testLoopSize;
 	}
 
 	@Test
@@ -143,10 +145,10 @@ public class BasicTest {
 		};
 		set.match(haystack, listener);
 		final long timeStart = System.nanoTime();
-		for (int i = 0; i < 10000; i++) {
+		for (int i = 0; i < testLoopSize; i++) {
 			set.match(haystack, performanceListener);
 		}
-		final long time = (System.nanoTime() - timeStart) / 10000;
+		final long time = (System.nanoTime() - timeStart) / testLoopSize;
 		if (printTimesOnly) {
 			System.out.println(time);
 		} else {
