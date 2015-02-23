@@ -15,6 +15,7 @@ public class OpenAddressMap {
 	private static final int HASH_PRIME = 16777619;
 	private TrieNode def = null;
 	private char[] keys = new char[2];
+	private int mask = keys.length - 1;
 	private TrieNode[] nodes = new TrieNode[2];
 	private int size = 0;
 
@@ -61,7 +62,7 @@ public class OpenAddressMap {
 	}
 
 	public TrieNode get(char c) {
-		int slot = hash(c) & (keys.length - 1);
+		int slot = hash(c) & mask;
 		if (keys[slot] == EMPTY) {
 			return null;
 		} else if (keys[slot] == c) {
@@ -89,7 +90,7 @@ public class OpenAddressMap {
 		if (record) {
 			gets++;
 		}
-		int slot = hash(c) & (keys.length - 1);
+		int slot = hash(c) & mask;
 		if (keys[slot] == EMPTY) {
 			if (record) {
 				access++;
@@ -133,7 +134,7 @@ public class OpenAddressMap {
 			enlarge();
 		}
 		++size;
-		int slot = hash(c) & (keys.length - 1);
+		int slot = hash(c) & mask;
 		for (int i = slot; i < keys.length; i++) {
 			if (keys[i] == EMPTY) {
 				keys[i] = c;
@@ -164,6 +165,7 @@ public class OpenAddressMap {
 		char[] oldKeysArray = keys;
 		TrieNode[] oldNodesArray = nodes;
 		keys = new char[oldKeysArray.length * 2];
+		mask = keys.length - 1;
 		Arrays.fill(keys, EMPTY);
 		nodes = new TrieNode[oldNodesArray.length * 2];
 		size = 0;
