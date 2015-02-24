@@ -1,12 +1,10 @@
 package net.rlenar.ahocorasick;
 
-import java.util.List;
+import java.util.Iterator;
 
 interface TrieNode {
 
-	<T> T accept(TreeVisitor<T> visitor);
-
-	<T> List<T> acceptRecursively(final TreeVisitor<T> visitor);
+	<T> Iterator<T> forEach(final EntryVisitor<T> visitor);
 
 	// Get fail transition
 	TrieNode getFailTransition();
@@ -15,5 +13,4 @@ interface TrieNode {
 
 	// Report matches at this node. Use at matching.
 	boolean output(MatchListener listener, int idx);
-
 }

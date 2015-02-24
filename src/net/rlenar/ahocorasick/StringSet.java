@@ -8,13 +8,28 @@ import java.util.NoSuchElementException;
 
 public class StringSet {
 
-	TrieNode root = new HashmapNode(true);
+	TrieNode root;
 
 	public StringSet(final Iterable<String> keywords) {
+		root = new HashmapNode(true);
 		// Add all keywords
 		for (final String keyword : keywords) {
 			if (keyword != null && keyword.length() > 0) {
-				root.accept(new Adder(keyword));
+				HashmapNode node = (HashmapNode) root;
+				for (int idx = 0; idx < keyword.length(); idx++) {
+					HashmapNode t = (HashmapNode) node.get(keyword.charAt(idx));
+					if (t == null) {
+						t = new HashmapNode(false);
+						node.put(keyword.charAt(idx), t);
+					}
+					node = t;
+				}
+				// index is past the keyword length
+				// this node is the last node in a keyword
+				// store the keyword as an output
+				// the parameter is offset from the last character
+				// to the first
+				node.output = new Keyword(keyword);
 			}
 		}
 
@@ -88,25 +103,6 @@ public class StringSet {
 		protected HashmapNode(boolean root) {
 			Arrays.fill(keys, EMPTY);
 			this.def = root ? this : null;
-		}
-
-		public <T> T accept(final TreeVisitor<T> visitor) {
-			return visitor.visit(this);
-		}
-
-		public <T> List<T> acceptRecursively(final TreeVisitor<T> visitor) {
-			final List<T> ret = new ArrayList<T>();
-			ret.add(visitor.visit(this));
-			Iterator<List<T>> iter = forEach(new EntryVisitor<List<T>>() {
-				public List<T> visit(char key, TrieNode value) {
-					return value.acceptRecursively(visitor);
-				}
-
-			});
-			while (iter.hasNext()) {
-				ret.addAll(iter.next());
-			}
-			return ret;
 		}
 
 		public <T> Iterator<T> forEach(final EntryVisitor<T> visitor) {
@@ -293,48 +289,6 @@ public class StringSet {
 			// HASH_BASIS = 0x811c9dc5;
 			// HASH_PRIME = 16777619;
 			return (((0x811c9dc5 ^ (c >> 8)) * 16777619) ^ (c & 0xff)) * 16777619;
-		}
-
-		public interface EntryVisitor<T> {
-			T visit(char key, TrieNode value);
-		}
-
-	}
-
-	private static class Adder implements TreeVisitor<Void> {
-
-		private int idx = 0;
-		private final String keyword;
-
-		public Adder(final String keyword) {
-			super();
-			this.keyword = keyword;
-		}
-
-		public Void visit(final HashmapNode node) {
-			if (keyword.length() > idx) {
-				// recursively travel the transitions, creating nodes
-				// as needed
-				TrieNode t = node.get(keyword.charAt(idx));
-				if (t == null) {
-					t = new HashmapNode(false);
-					node.put(keyword.charAt(idx), t);
-				}
-				idx++;
-				t.accept(this);
-			} else {
-				// index is past the keyword length
-				// this node is the last node in a keyword
-				// store the keyword as an output
-				// the parameter is offset from the last character
-				// to the first
-				node.output = new Keyword(keyword);
-			}
-			return null;
-		}
-
-		public Void visit(final TrieNode node) {
-			throw new UnsupportedOperationException();
 		}
 
 	}
