@@ -287,8 +287,8 @@ public class StringSet {
 
 		private int hash(char c) {
 			// HASH_BASIS = 0x811c9dc5;
-			// HASH_PRIME = 16777619;
-			return (((0x811c9dc5 ^ (c >> 8)) * 16777619) ^ (c & 0xff)) * 16777619;
+			final int HASH_PRIME = 16777619;
+			return (((0x811c9dc5 ^ (c >> 8)) * HASH_PRIME) ^ (c & 0xff)) * HASH_PRIME;
 		}
 
 	}
