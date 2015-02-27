@@ -88,7 +88,7 @@ public class StringSet {
 		return edgeQueue;
 	}
 
-	static class HashmapNode implements TrieNode {
+	static class HashmapNode extends TrieNode {
 
 		private static final char EMPTY = 0xfffe;
 
@@ -105,6 +105,7 @@ public class StringSet {
 			this.def = root ? this : null;
 		}
 
+		@Override
 		public <T> Iterator<T> forEach(final EntryVisitor<T> visitor) {
 			return new Iterator<T>() {
 
@@ -169,16 +170,7 @@ public class StringSet {
 			});
 		}
 
-		// Get fail transition
-		public TrieNode getFailTransition() {
-			return failTransition;
-		}
-
-		// Get linked list of outputs at this node. Used in building the tree.
-		public Keyword getOutput() {
-			return output;
-		}
-
+		@Override
 		public TrieNode getTransition(final char c) {
 			int slot = hash(c) & mask;
 			int currentSlot = slot;
@@ -222,20 +214,6 @@ public class StringSet {
 					output.alsoContains = ((HashmapNode) failTransition).getOutput();
 				}
 			}
-		}
-
-		// Report matches at this node. Use at matching.
-		public boolean output(final MatchListener listener, final int idx) {
-			// since idx is the last character in the match
-			// position it past the match (to be consistent with conventions)
-			Keyword k = output;
-			boolean ret = true;
-			while (k != null && ret) {
-				ret = listener.match(k.word, idx);
-				k = k.alsoContains;
-			}
-			return ret;
-
 		}
 
 		public TrieNode put(char c, TrieNode value) {
