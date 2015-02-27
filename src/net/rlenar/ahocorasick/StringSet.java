@@ -92,8 +92,6 @@ public class StringSet {
 
 		private static final char EMPTY = 0xfffe;
 
-		TrieNode failTransition;
-		Keyword output;
 		private TrieNode def = null;
 		private char[] keys = new char[1];
 		private int mask = keys.length - 1;
