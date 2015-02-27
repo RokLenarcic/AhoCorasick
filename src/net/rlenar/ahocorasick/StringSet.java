@@ -1,10 +1,6 @@
 package net.rlenar.ahocorasick;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.NoSuchElementException;
 
 public class StringSet {
 
@@ -33,13 +29,40 @@ public class StringSet {
 			}
 		}
 
-		// construct breath-first flat representation of the tree
-		final List<Edge> edgeQueue = flatten();
-
 		// Calculate fail transitions and output sets.
-		for (final Edge e : edgeQueue) {
-			((HashmapNode) e.to).init(e.from, e.c);
-		}
+		final EntryVisitor initFailTransitionsAndOutputs = new EntryVisitor() {
+
+			public TrieNode visit(TrieNode parent, char key, TrieNode value) {
+				if (parent != null) {
+					TrieNode failParent = parent.getFailTransition();
+					//
+					if (failParent == null) {
+						// first level nodes have one possible fail transition, which is
+						// root because the only possible suffix to a one character
+						// string is an empty string
+						value.failTransition = parent;
+					} else {
+						do {
+							final TrieNode matchContinuation = failParent.getTransition(key);
+							if (matchContinuation != null) {
+								value.failTransition = matchContinuation;
+							} else {
+								failParent = failParent.getFailTransition();
+							}
+						} while (value.failTransition == null);
+						if (value.output == null) {
+							value.output = value.failTransition.getOutput();
+						} else {
+							value.output.alsoContains = value.failTransition.getOutput();
+						}
+					}
+				}
+				return null;
+			}
+
+		};
+
+		new BreadthFirstVisitor(initFailTransitionsAndOutputs).visitAll(root);
 	}
 
 	public void match(final String haystack, final MatchListener listener) {
@@ -74,20 +97,6 @@ public class StringSet {
 		}
 	}
 
-	private List<Edge> flatten() {
-
-		final List<Edge> edgeQueue = new ArrayList<Edge>();
-
-		edgeQueue.add(new Edge(null, root, (char) 0));
-		for (int i = 0; i < edgeQueue.size(); i++) {
-			final Iterator<Edge> e = ((HashmapNode) edgeQueue.get(i).to).getEdges();
-			while (e.hasNext()) {
-				edgeQueue.add(e.next());
-			}
-		}
-		return edgeQueue;
-	}
-
 	static class HashmapNode extends TrieNode {
 
 		private static final char EMPTY = 0xfffe;
@@ -101,42 +110,6 @@ public class StringSet {
 		protected HashmapNode(boolean root) {
 			Arrays.fill(keys, EMPTY);
 			this.def = root ? this : null;
-		}
-
-		@Override
-		public <T> Iterator<T> forEach(final EntryVisitor<T> visitor) {
-			return new Iterator<T>() {
-
-				private T bank = null;
-				private int i = -1;
-				private Boolean next = null;
-
-				public boolean hasNext() {
-					if (next == null) {
-						while (++i != keys.length) {
-							if (nodes[i] != null) {
-								bank = visitor.visit(keys[i], nodes[i]);
-								next = Boolean.TRUE;
-								return next;
-							}
-						}
-						next = Boolean.FALSE;
-					}
-					return next;
-				}
-
-				public T next() {
-					if (hasNext()) {
-						next = null;
-						return bank;
-					}
-					throw new NoSuchElementException();
-				}
-
-				public void remove() {
-					throw new IllegalArgumentException();
-				}
-			};
 		}
 
 		public TrieNode get(char c) {
@@ -153,19 +126,6 @@ public class StringSet {
 				}
 			} while (currentSlot != slot);
 			return null;
-		}
-
-		// Get edges leading out of the node. Root node doesn't
-		// return default transitions.
-		public Iterator<Edge> getEdges() {
-			// Iterator that simply supplies edge objects from hashmap entries.
-			return forEach(new EntryVisitor<Edge>() {
-
-				public Edge visit(char key, TrieNode value) {
-					return new Edge(HashmapNode.this, value, key);
-				}
-
-			});
 		}
 
 		@Override
@@ -185,31 +145,14 @@ public class StringSet {
 			return def;
 		}
 
-		// this function is called in breadth-first fashion
-		public void init(final TrieNode parent, final char c) {
-			if (parent == null) {
-				return;
-			}
-			TrieNode failParent = parent.getFailTransition();
-			//
-			if (failParent == null) {
-				// first level nodes have one possible fail transition, which is
-				// root because the only possible suffix to a one character
-				// string is an empty string
-				failTransition = parent;
-			} else {
-				do {
-					final TrieNode matchContinuation = failParent.getTransition(c);
-					if (matchContinuation != null) {
-						failTransition = matchContinuation;
-					} else {
-						failParent = failParent.getFailTransition();
+		@Override
+		public void mapEntries(EntryVisitor visitor) {
+			for (int i = 0; i < keys.length; i++) {
+				if (keys[i] != EMPTY) {
+					TrieNode ret = visitor.visit(this, keys[i], nodes[i]);
+					if (ret != null) {
+						nodes[i] = ret;
 					}
-				} while (failTransition == null);
-				if (output == null) {
-					output = ((HashmapNode) failTransition).getOutput();
-				} else {
-					output.alsoContains = ((HashmapNode) failTransition).getOutput();
 				}
 			}
 		}
@@ -267,18 +210,6 @@ public class StringSet {
 			return (((0x811c9dc5 ^ (c >> 8)) * HASH_PRIME) ^ (c & 0xff)) * HASH_PRIME;
 		}
 
-	}
-
-	private static final class Edge {
-		final char c;
-		final TrieNode from;
-		final TrieNode to;
-
-		Edge(final TrieNode from, final TrieNode to, final char c) {
-			this.c = c;
-			this.from = from;
-			this.to = to;
-		}
 	}
 
 }

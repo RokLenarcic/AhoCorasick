@@ -1,13 +1,9 @@
 package net.rlenar.ahocorasick;
 
-import java.util.Iterator;
-
 public abstract class TrieNode {
 
 	protected TrieNode failTransition;
 	protected Keyword output;
-
-	public abstract <T> Iterator<T> forEach(final EntryVisitor<T> visitor);
 
 	// Get fail transition
 	public final TrieNode getFailTransition() {
@@ -19,8 +15,10 @@ public abstract class TrieNode {
 		return output;
 	}
 
-	// Get fail transition
+	// Get transition (root node returns something non-null for all characters - itself)
 	public abstract TrieNode getTransition(char c);
+
+	public abstract void mapEntries(final EntryVisitor visitor);
 
 	// Report matches at this node. Use at matching.
 	public final boolean output(MatchListener listener, int idx) {

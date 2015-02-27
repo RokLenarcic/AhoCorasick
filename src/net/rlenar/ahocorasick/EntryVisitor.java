@@ -1,5 +1,5 @@
 package net.rlenar.ahocorasick;
 
-public interface EntryVisitor<T> {
-	T visit(char key, TrieNode value);
+public interface EntryVisitor {
+	TrieNode visit(TrieNode parent, char key, TrieNode value);
 }
