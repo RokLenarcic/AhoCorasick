@@ -1,6 +1,6 @@
 package net.rlenar.ahocorasick;
 
-class Keyword {
+final class Keyword {
 	Keyword alsoContains;
 	final String word;
 

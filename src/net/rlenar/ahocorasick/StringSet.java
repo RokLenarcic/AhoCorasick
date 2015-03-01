@@ -1,10 +1,12 @@
 package net.rlenar.ahocorasick;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class StringSet {
 
-	TrieNode root;
+	private TrieNode root;
 
 	public StringSet(final Iterable<String> keywords) {
 		root = new HashmapNode(true);
@@ -30,7 +32,7 @@ public class StringSet {
 		}
 
 		// Calculate fail transitions and output sets.
-		final EntryVisitor initFailTransitionsAndOutputs = new EntryVisitor() {
+		root = visitAll(new EntryVisitor() {
 
 			public TrieNode visit(TrieNode parent, char key, TrieNode value) {
 				if (parent != null) {
@@ -60,9 +62,7 @@ public class StringSet {
 				return null;
 			}
 
-		};
-
-		new BreadthFirstVisitor(initFailTransitionsAndOutputs).visitAll(root);
+		});
 	}
 
 	public void match(final String haystack, final MatchListener listener) {
@@ -97,7 +97,36 @@ public class StringSet {
 		}
 	}
 
-	static class HashmapNode extends TrieNode {
+	private TrieNode visitAll(final EntryVisitor visitor) {
+		final List<TrieNode> queue = new ArrayList<TrieNode>();
+		TrieNode ret = visitor.visit(null, '\ufffe', root);
+		if (ret == null) {
+			ret = root;
+		}
+		EntryVisitor queueingVisitor = new EntryVisitor() {
+
+			public TrieNode visit(TrieNode parent, char key, TrieNode value) {
+				TrieNode ret = visitor.visit(parent, key, value);
+				if (ret != null) {
+					queue.add(ret);
+				} else {
+					queue.add(value);
+				}
+				return ret;
+			}
+		};
+		ret.mapEntries(queueingVisitor);
+		for (int i = 0; i < queue.size(); i++) {
+			queue.get(i).mapEntries(queueingVisitor);
+		}
+		return ret;
+	}
+
+	private interface EntryVisitor {
+		TrieNode visit(TrieNode parent, char key, TrieNode value);
+	}
+
+	private static class HashmapNode extends TrieNode {
 
 		private static final char EMPTY = 0xfffe;
 
@@ -210,6 +239,40 @@ public class StringSet {
 			return (((0x811c9dc5 ^ (c >> 8)) * HASH_PRIME) ^ (c & 0xff)) * HASH_PRIME;
 		}
 
+	}
+
+	private static abstract class TrieNode {
+
+		protected TrieNode failTransition;
+		protected Keyword output;
+
+		// Get fail transition
+		public final TrieNode getFailTransition() {
+			return failTransition;
+		}
+
+		// Get linked list of outputs at this node. Used in building the tree.
+		public final Keyword getOutput() {
+			return output;
+		}
+
+		// Get transition (root node returns something non-null for all characters - itself)
+		public abstract TrieNode getTransition(char c);
+
+		public abstract void mapEntries(final EntryVisitor visitor);
+
+		// Report matches at this node. Use at matching.
+		public final boolean output(MatchListener listener, int idx) {
+			// since idx is the last character in the match
+			// position it past the match (to be consistent with conventions)
+			Keyword k = output;
+			boolean ret = true;
+			while (k != null && ret) {
+				ret = listener.match(k.word, idx);
+				k = k.alsoContains;
+			}
+			return ret;
+		}
 	}
 
 }
