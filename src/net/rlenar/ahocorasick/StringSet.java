@@ -30,6 +30,12 @@ public class StringSet {
 				node.output = new Keyword(keyword);
 			}
 		}
+		root = visitAll(new EntryVisitor() {
+
+			public TrieNode visit(TrieNode parent, char key, TrieNode value) {
+				return RangeNode.optimizeNode(value);
+			}
+		});
 
 		// Calculate fail transitions and output sets.
 		root = visitAll(new EntryVisitor() {
@@ -37,7 +43,6 @@ public class StringSet {
 			public TrieNode visit(TrieNode parent, char key, TrieNode value) {
 				if (parent != null) {
 					TrieNode failParent = parent.getFailTransition();
-					//
 					if (failParent == null) {
 						// first level nodes have one possible fail transition, which is
 						// root because the only possible suffix to a one character
@@ -130,15 +135,14 @@ public class StringSet {
 
 		private static final char EMPTY = 0xfffe;
 
-		private TrieNode def = null;
 		private char[] keys = new char[1];
 		private int mask = keys.length - 1;
 		private TrieNode[] nodes = new TrieNode[1];
 		private int size = 0;
 
 		protected HashmapNode(boolean root) {
+			super(root);
 			Arrays.fill(keys, EMPTY);
-			this.def = root ? this : null;
 		}
 
 		public TrieNode get(char c) {
@@ -164,14 +168,14 @@ public class StringSet {
 			do {
 				char keyInSlot = keys[currentSlot];
 				if (keyInSlot == EMPTY) {
-					return def;
+					return defaultTransition;
 				} else if (keyInSlot == c) {
 					return nodes[currentSlot];
 				} else {
 					currentSlot = ++currentSlot & mask;
 				}
 			} while (currentSlot != slot);
-			return def;
+			return defaultTransition;
 		}
 
 		@Override
@@ -241,10 +245,95 @@ public class StringSet {
 
 	}
 
+	private static class RangeNode extends TrieNode {
+
+		private static TrieNode optimizeNode(TrieNode n) {
+			if (n instanceof HashmapNode) {
+				HashmapNode node = (HashmapNode) n;
+				int size = node.size;
+				if (size == 0) {
+					return new RangeNode(n.defaultTransition != null, '\uffff', 0, null, node.output);
+				} else {
+					char min = '\uffff';
+					char max = 0;
+					for (int i = 0; i < node.keys.length; i++) {
+						if (node.nodes[i] != null) {
+							if (node.keys[i] > max) {
+								max = node.keys[i];
+							}
+							if (node.keys[i] < min) {
+								min = node.keys[i];
+							}
+						}
+					}
+					int intervalSize = max - min + 1;
+					if (intervalSize <= 8 || (size > (intervalSize) * 0.75)) {
+						TrieNode[] children = new TrieNode[intervalSize];
+						for (int i = 0; i < node.keys.length; i++) {
+							if (node.nodes[i] != null) {
+								children[node.keys[i] - min] = node.nodes[i];
+							}
+						}
+						return new RangeNode(n.defaultTransition != null, min, children.length, children, node.output);
+					}
+				}
+
+			}
+			return n;
+		}
+
+		private TrieNode[] children;
+		private int from;
+		private int size;
+
+		protected RangeNode(boolean root, char from, int size, TrieNode[] children, Keyword k) {
+			super(root);
+			if (root) {
+				for (int i = 0; i < children.length; i++) {
+					if (children[i] == null) {
+						children[i] = this;
+					}
+				}
+			}
+			this.from = from;
+			this.size = size;
+			this.children = children;
+			this.output = k;
+		}
+
+		@Override
+		public TrieNode getTransition(char c) {
+			int idx = c - from;
+			if (idx >= 0 && idx < size) {
+				return children[idx];
+			}
+			return defaultTransition;
+		}
+
+		@Override
+		public void mapEntries(EntryVisitor visitor) {
+			for (int i = 0; i < size; i++) {
+				if (children[i] != null && children[i] != this) {
+					TrieNode ret = visitor.visit(this, (char) (from + i), children[i]);
+					if (ret != null) {
+						children[i] = ret;
+					}
+				}
+			}
+
+		}
+
+	}
+
 	private static abstract class TrieNode {
 
+		protected TrieNode defaultTransition = null;
 		protected TrieNode failTransition;
 		protected Keyword output;
+
+		protected TrieNode(boolean root) {
+			this.defaultTransition = root ? this : null;
+		}
 
 		// Get fail transition
 		public final TrieNode getFailTransition() {
@@ -274,5 +363,4 @@ public class StringSet {
 			return ret;
 		}
 	}
-
 }
