@@ -267,7 +267,7 @@ public class StringSet {
 						}
 					}
 					int intervalSize = max - min + 1;
-					if (intervalSize <= 8 || (size > (intervalSize) * 0.75)) {
+					if (intervalSize <= 8 || (size > (intervalSize) * 0.70)) {
 						TrieNode[] children = new TrieNode[intervalSize];
 						for (int i = 0; i < node.keys.length; i++) {
 							if (node.nodes[i] != null) {
