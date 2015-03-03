@@ -148,11 +148,11 @@ public class StringSet {
 			int slot = hash(c) & mask;
 			int currentSlot = slot;
 			do {
-				char keyInSlot = keys[currentSlot];
-				if (keyInSlot == EMPTY) {
+				TrieNode nodeInSlot = nodes[currentSlot];
+				if (nodeInSlot == null) {
 					return null;
-				} else if (keyInSlot == c) {
-					return nodes[currentSlot];
+				} else if (keys[currentSlot] == c) {
+					return nodeInSlot;
 				} else {
 					currentSlot = ++currentSlot & mask;
 				}
@@ -165,11 +165,11 @@ public class StringSet {
 			int slot = hash(c) & mask;
 			int currentSlot = slot;
 			do {
-				char keyInSlot = keys[currentSlot];
-				if (keyInSlot == EMPTY) {
+				TrieNode nodeInSlot = nodes[currentSlot];
+				if (nodeInSlot == null) {
 					return defaultTransition;
-				} else if (keyInSlot == c) {
-					return nodes[currentSlot];
+				} else if (keys[currentSlot] == c) {
+					return nodeInSlot;
 				} else {
 					currentSlot = ++currentSlot & mask;
 				}
@@ -196,11 +196,7 @@ public class StringSet {
 			++size;
 			int slot = hash(c) & mask;
 			for (int i = slot; i < keys.length; i++) {
-				if (keys[i] == EMPTY) {
-					keys[i] = c;
-					nodes[i] = value;
-					return null;
-				} else if (keys[i] == c) {
+				if (nodes[i] == null || keys[i] == c) {
 					keys[i] = c;
 					TrieNode ret = nodes[i];
 					nodes[i] = value;
@@ -208,11 +204,8 @@ public class StringSet {
 				}
 			}
 			for (int i = 0; i < slot; i++) {
-				if (keys[i] == EMPTY) {
+				if (nodes[i] == null || keys[i] == c) {
 					keys[i] = c;
-					nodes[i] = value;
-					return null;
-				} else if (keys[i] == c) {
 					TrieNode ret = nodes[i];
 					nodes[i] = value;
 					return ret;
