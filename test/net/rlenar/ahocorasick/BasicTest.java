@@ -124,6 +124,12 @@ public class BasicTest {
 	private void test(final String haystack, final String... needles) {
 		final List<String> keywords = Arrays.asList(needles);
 		final StringSet set = new StringSet(keywords);
+		System.gc();
+		try {
+			Thread.sleep(500);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 		class CountingMatchListener implements MatchListener {
 
 			int count = 0;
