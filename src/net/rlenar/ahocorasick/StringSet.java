@@ -165,11 +165,10 @@ public class StringSet {
 			int slot = hash(c) & mask;
 			int currentSlot = slot;
 			do {
-				TrieNode nodeInSlot = nodes[currentSlot];
-				if (nodeInSlot == null) {
+				if (keys[currentSlot] == c) {
+					return nodes[currentSlot];
+				} else if (nodes[currentSlot] == null) {
 					return defaultTransition;
-				} else if (keys[currentSlot] == c) {
-					return nodeInSlot;
 				} else {
 					currentSlot = ++currentSlot & mask;
 				}
