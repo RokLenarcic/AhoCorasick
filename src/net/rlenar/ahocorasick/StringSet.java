@@ -29,12 +29,12 @@ public class StringSet {
 				node.output = new Keyword(keyword);
 			}
 		}
-		root = visitAll(new EntryVisitor() {
-
-			public TrieNode visit(TrieNode parent, char key, TrieNode value) {
-				return RangeNode.optimizeNode(value);
-			}
-		});
+		// root = visitAll(new EntryVisitor() {
+		//
+		// public TrieNode visit(TrieNode parent, char key, TrieNode value) {
+		// return RangeNode.optimizeNode(value);
+		// }
+		// });
 
 		// Calculate fail transitions and output sets.
 		root = visitAll(new EntryVisitor() {
