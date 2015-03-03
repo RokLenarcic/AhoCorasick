@@ -1,8 +1,7 @@
 package net.rlenar.ahocorasick;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
+import java.util.LinkedList;
 
 public class StringSet {
 
@@ -103,7 +102,7 @@ public class StringSet {
 	}
 
 	private TrieNode visitAll(final EntryVisitor visitor) {
-		final List<TrieNode> queue = new ArrayList<TrieNode>();
+		final LinkedList<TrieNode> queue = new LinkedList<TrieNode>();
 		TrieNode ret = visitor.visit(null, '\ufffe', root);
 		if (ret == null) {
 			ret = root;
@@ -121,8 +120,8 @@ public class StringSet {
 			}
 		};
 		ret.mapEntries(queueingVisitor);
-		for (int i = 0; i < queue.size(); i++) {
-			queue.get(i).mapEntries(queueingVisitor);
+		while (!queue.isEmpty()) {
+			queue.poll().mapEntries(queueingVisitor);
 		}
 		return ret;
 	}
