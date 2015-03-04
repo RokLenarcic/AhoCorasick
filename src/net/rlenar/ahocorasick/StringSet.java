@@ -21,7 +21,7 @@ class StringSet {
 				// store the keyword as an output
 				// the parameter is offset from the last character
 				// to the first
-				currentNode.output = new Keyword(keyword);
+				currentNode.output = new Match(keyword);
 			}
 		}
 		root = visitAll(new EntryVisitor() {
@@ -53,7 +53,7 @@ class StringSet {
 						if (value.output == null) {
 							value.output = value.failTransition.getOutput();
 						} else {
-							value.output.alsoContains = value.failTransition.getOutput();
+							value.output.alsoMatches = value.failTransition.getOutput();
 						}
 					}
 				}
@@ -299,7 +299,7 @@ class StringSet {
 
 		protected TrieNode defaultTransition = null;
 		protected TrieNode failTransition;
-		protected Keyword output;
+		protected Match output;
 
 		protected TrieNode(boolean root) {
 			this.defaultTransition = root ? this : null;
@@ -311,7 +311,7 @@ class StringSet {
 		}
 
 		// Get linked list of outputs at this node. Used in building the tree.
-		public final Keyword getOutput() {
+		public final Match getOutput() {
 			return output;
 		}
 
@@ -324,11 +324,11 @@ class StringSet {
 		public final boolean output(MatchListener listener, int idx) {
 			// since idx is the last character in the match
 			// position it past the match (to be consistent with conventions)
-			Keyword k = output;
+			Match k = output;
 			boolean ret = true;
 			while (k != null && ret) {
 				ret = listener.match(k.word, idx);
-				k = k.alsoContains;
+				k = k.alsoMatches;
 			}
 			return ret;
 		}
