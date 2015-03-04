@@ -129,7 +129,7 @@ class StringSet {
 		TrieNode visit(TrieNode parent, char key, TrieNode value);
 	}
 
-	private static class HashmapNode extends TrieNode {
+	private final static class HashmapNode extends TrieNode {
 
 		private char[] keys = new char[1];
 		private int mask = keys.length - 1;
@@ -246,22 +246,23 @@ class StringSet {
 				}
 				int intervalSize = max - min + 1;
 				if (intervalSize <= 8 || (size > (intervalSize) * 0.70)) {
-					return new RangeNode(node, min, intervalSize);
+					return new RangeNode(node, min, max);
 				}
 			}
 			return n;
 		}
 
+		private char base = 0;
 		private TrieNode[] children;
-		private int from;
-		private int size;
+		private int size = 0;
 
-		private RangeNode(HashmapNode n, char from, int size) {
+		private RangeNode(HashmapNode n, char from, char to) {
 			super(n.defaultTransition != null);
-			this.from = from;
-			this.size = size;
+			// Value of the first character
+			this.base = from;
+			this.size = to - from + 1;
 			this.output = n.output;
-			if (size != 0) {
+			if (size > 0) {
 				this.children = new TrieNode[size];
 				if (n.defaultTransition != null) {
 					Arrays.fill(children, this);
@@ -276,8 +277,8 @@ class StringSet {
 
 		@Override
 		public TrieNode getTransition(char c) {
-			int idx = c - from;
-			if (idx >= 0 && idx < size) {
+			int idx = (char) (c - base);
+			if (idx < size) {
 				return children[idx];
 			}
 			return defaultTransition;
@@ -285,15 +286,16 @@ class StringSet {
 
 		@Override
 		public void mapEntries(EntryVisitor visitor) {
-			for (int i = 0; i < size; i++) {
-				if (children[i] != null && children[i] != this) {
-					TrieNode ret = visitor.visit(this, (char) (from + i), children[i]);
-					if (ret != null) {
-						children[i] = ret;
+			if (children != null) {
+				for (int i = 0; i < children.length; i++) {
+					if (children[i] != null && children[i] != this) {
+						TrieNode ret = visitor.visit(this, (char) (base + i), children[i]);
+						if (ret != null) {
+							children[i] = ret;
+						}
 					}
 				}
 			}
-
 		}
 
 	}
