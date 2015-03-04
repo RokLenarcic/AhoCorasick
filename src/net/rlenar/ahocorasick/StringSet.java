@@ -1,8 +1,9 @@
 package net.rlenar.ahocorasick;
 
+import java.util.Arrays;
 import java.util.LinkedList;
 
-public class StringSet {
+class StringSet {
 
 	private TrieNode root;
 
@@ -189,22 +190,17 @@ public class StringSet {
 			}
 			++size;
 			int slot = hash(c) & mask;
-			for (int i = slot; i < keys.length; i++) {
-				if (nodes[i] == null || keys[i] == c) {
-					keys[i] = c;
-					TrieNode ret = nodes[i];
-					nodes[i] = value;
+			int currentSlot = slot;
+			do {
+				if (nodes[currentSlot] == null || keys[currentSlot] == c) {
+					keys[currentSlot] = c;
+					TrieNode ret = nodes[currentSlot];
+					nodes[currentSlot] = value;
 					return ret;
+				} else {
+					currentSlot = ++currentSlot & mask;
 				}
-			}
-			for (int i = 0; i < slot; i++) {
-				if (nodes[i] == null || keys[i] == c) {
-					keys[i] = c;
-					TrieNode ret = nodes[i];
-					nodes[i] = value;
-					return ret;
-				}
-			}
+			} while (currentSlot != slot);
 			throw new IllegalStateException();
 		}
 
@@ -230,39 +226,28 @@ public class StringSet {
 
 	}
 
-	private static class RangeNode extends TrieNode {
+	private static final class RangeNode extends TrieNode {
 
 		private static TrieNode optimizeNode(TrieNode n) {
 			if (n instanceof HashmapNode) {
 				HashmapNode node = (HashmapNode) n;
+				char min = '\uffff';
+				char max = 0;
 				int size = node.size;
-				if (size == 0) {
-					return new RangeNode(n.defaultTransition != null, '\uffff', 0, null, node.output);
-				} else {
-					char min = '\uffff';
-					char max = 0;
-					for (int i = 0; i < node.keys.length; i++) {
-						if (node.nodes[i] != null) {
-							if (node.keys[i] > max) {
-								max = node.keys[i];
-							}
-							if (node.keys[i] < min) {
-								min = node.keys[i];
-							}
+				for (int i = 0; i < node.nodes.length; i++) {
+					if (node.nodes[i] != null) {
+						if (node.keys[i] > max) {
+							max = node.keys[i];
 						}
-					}
-					int intervalSize = max - min + 1;
-					if (intervalSize <= 8 || (size > (intervalSize) * 0.70)) {
-						TrieNode[] children = new TrieNode[intervalSize];
-						for (int i = 0; i < node.keys.length; i++) {
-							if (node.nodes[i] != null) {
-								children[node.keys[i] - min] = node.nodes[i];
-							}
+						if (node.keys[i] < min) {
+							min = node.keys[i];
 						}
-						return new RangeNode(n.defaultTransition != null, min, children.length, children, node.output);
 					}
 				}
-
+				int intervalSize = max - min + 1;
+				if (intervalSize <= 8 || (size > (intervalSize) * 0.70)) {
+					return new RangeNode(node, min, intervalSize);
+				}
 			}
 			return n;
 		}
@@ -271,19 +256,22 @@ public class StringSet {
 		private int from;
 		private int size;
 
-		protected RangeNode(boolean root, char from, int size, TrieNode[] children, Keyword k) {
-			super(root);
-			if (root) {
-				for (int i = 0; i < children.length; i++) {
-					if (children[i] == null) {
-						children[i] = this;
+		private RangeNode(HashmapNode n, char from, int size) {
+			super(n.defaultTransition != null);
+			this.from = from;
+			this.size = size;
+			this.output = n.output;
+			if (size != 0) {
+				this.children = new TrieNode[size];
+				if (n.defaultTransition != null) {
+					Arrays.fill(children, this);
+				}
+				for (int i = 0; i < n.nodes.length; i++) {
+					if (n.nodes[i] != null) {
+						children[n.keys[i] - from] = n.nodes[i];
 					}
 				}
 			}
-			this.from = from;
-			this.size = size;
-			this.children = children;
-			this.output = k;
 		}
 
 		@Override
