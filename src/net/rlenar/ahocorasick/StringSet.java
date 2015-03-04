@@ -21,12 +21,12 @@ class StringSet {
 				// store the keyword as an output
 				// the parameter is offset from the last character
 				// to the first
-				currentNode.output = new Match(keyword);
+				currentNode.match = new Match(keyword);
 			}
 		}
 		root = visitAll(new EntryVisitor() {
 			public TrieNode visit(TrieNode parent, char key, TrieNode value) {
-				return RangeNode.optimizeNode(value);
+				return optimizeNode(value);
 			}
 		});
 
@@ -50,10 +50,10 @@ class StringSet {
 								failParent = failParent.getFailTransition();
 							}
 						} while (value.failTransition == null);
-						if (value.output == null) {
-							value.output = value.failTransition.getOutput();
+						if (value.match == null) {
+							value.match = value.failTransition.getMatch();
 						} else {
-							value.output.alsoMatches = value.failTransition.getOutput();
+							value.match.subMatch = value.failTransition.getMatch();
 						}
 					}
 				}
@@ -95,6 +95,30 @@ class StringSet {
 		}
 	}
 
+	private final TrieNode optimizeNode(TrieNode n) {
+		if (n instanceof HashmapNode) {
+			HashmapNode node = (HashmapNode) n;
+			char minKey = '\uffff';
+			char maxKey = 0;
+			int size = node.numEntries;
+			for (int i = 0; i < node.children.length; i++) {
+				if (node.children[i] != null) {
+					if (node.keys[i] > maxKey) {
+						maxKey = node.keys[i];
+					}
+					if (node.keys[i] < minKey) {
+						minKey = node.keys[i];
+					}
+				}
+			}
+			int keyIntervalSize = maxKey - minKey + 1;
+			if (keyIntervalSize <= 8 || (size > (keyIntervalSize) * 0.70)) {
+				return new RangeNode(node, minKey, maxKey);
+			}
+		}
+		return n;
+	}
+
 	private TrieNode visitAll(final EntryVisitor visitor) {
 		final LinkedList<TrieNode> queue = new LinkedList<TrieNode>();
 		TrieNode ret = visitor.visit(null, '\ufffe', root);
@@ -126,35 +150,13 @@ class StringSet {
 
 	private final static class HashmapNode extends TrieNode {
 
+		private TrieNode[] children = new TrieNode[1];
 		private char[] keys = new char[1];
 		private int modulusMask = keys.length - 1;
-		private TrieNode[] children = new TrieNode[1];
 		private int numEntries = 0;
 
 		protected HashmapNode(boolean root) {
 			super(root);
-		}
-
-		public HashmapNode getOrAddChild(char key) {
-			if (keys.length < 0x10000 && ((numEntries >= keys.length) || (numEntries > 16 && (numEntries >= keys.length * 0.90f)))) {
-				enlarge();
-			}
-			++numEntries;
-			int defaultSlot = hash(key) & modulusMask;
-			int currentSlot = defaultSlot;
-			do {
-				if (children[currentSlot] == null) {
-					keys[currentSlot] = key;
-					HashmapNode newChild = new HashmapNode(false);
-					children[currentSlot] = newChild;
-					return newChild;
-				} else if (keys[currentSlot] == key) {
-					return (HashmapNode) children[currentSlot];
-				} else {
-					currentSlot = ++currentSlot & modulusMask;
-				}
-			} while (currentSlot != defaultSlot);
-			throw new IllegalStateException();
 		}
 
 		@Override
@@ -213,6 +215,28 @@ class StringSet {
 			this.modulusMask = biggerMask;
 		}
 
+		private HashmapNode getOrAddChild(char key) {
+			if (keys.length < 0x10000 && ((numEntries >= keys.length) || (numEntries > 16 && (numEntries >= keys.length * 0.90f)))) {
+				enlarge();
+			}
+			++numEntries;
+			int defaultSlot = hash(key) & modulusMask;
+			int currentSlot = defaultSlot;
+			do {
+				if (children[currentSlot] == null) {
+					keys[currentSlot] = key;
+					HashmapNode newChild = new HashmapNode(false);
+					children[currentSlot] = newChild;
+					return newChild;
+				} else if (keys[currentSlot] == key) {
+					return (HashmapNode) children[currentSlot];
+				} else {
+					currentSlot = ++currentSlot & modulusMask;
+				}
+			} while (currentSlot != defaultSlot);
+			throw new IllegalStateException();
+		}
+
 		private int hash(char c) {
 			// HASH_BASIS = 0x811c9dc5;
 			final int HASH_PRIME = 16777619;
@@ -223,30 +247,6 @@ class StringSet {
 
 	private static final class RangeNode extends TrieNode {
 
-		private static TrieNode optimizeNode(TrieNode n) {
-			if (n instanceof HashmapNode) {
-				HashmapNode node = (HashmapNode) n;
-				char minKey = '\uffff';
-				char maxKey = 0;
-				int size = node.numEntries;
-				for (int i = 0; i < node.children.length; i++) {
-					if (node.children[i] != null) {
-						if (node.keys[i] > maxKey) {
-							maxKey = node.keys[i];
-						}
-						if (node.keys[i] < minKey) {
-							minKey = node.keys[i];
-						}
-					}
-				}
-				int keyIntervalSize = maxKey - minKey + 1;
-				if (keyIntervalSize <= 8 || (size > (keyIntervalSize) * 0.70)) {
-					return new RangeNode(node, minKey, maxKey);
-				}
-			}
-			return n;
-		}
-
 		private char baseChar = 0;
 		private TrieNode[] children;
 		private int size = 0;
@@ -256,7 +256,7 @@ class StringSet {
 			// Value of the first character
 			this.baseChar = from;
 			this.size = to - from + 1;
-			this.output = oldNode.output;
+			this.match = oldNode.match;
 			if (size > 0) {
 				this.children = new TrieNode[size];
 				if (oldNode.defaultTransition != null) {
@@ -299,7 +299,7 @@ class StringSet {
 
 		protected TrieNode defaultTransition = null;
 		protected TrieNode failTransition;
-		protected Match output;
+		protected Match match;
 
 		protected TrieNode(boolean root) {
 			this.defaultTransition = root ? this : null;
@@ -311,8 +311,8 @@ class StringSet {
 		}
 
 		// Get linked list of outputs at this node. Used in building the tree.
-		public final Match getOutput() {
-			return output;
+		public final Match getMatch() {
+			return match;
 		}
 
 		// Get transition (root node returns something non-null for all characters - itself)
@@ -324,11 +324,11 @@ class StringSet {
 		public final boolean output(MatchListener listener, int idx) {
 			// since idx is the last character in the match
 			// position it past the match (to be consistent with conventions)
-			Match k = output;
+			Match k = match;
 			boolean ret = true;
 			while (k != null && ret) {
 				ret = listener.match(k.word, idx);
-				k = k.alsoMatches;
+				k = k.subMatch;
 			}
 			return ret;
 		}
