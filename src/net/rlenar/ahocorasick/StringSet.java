@@ -1,6 +1,5 @@
 package net.rlenar.ahocorasick;
 
-import java.util.Arrays;
 import java.util.LinkedList;
 
 public class StringSet {
@@ -131,8 +130,6 @@ public class StringSet {
 
 	private static class HashmapNode extends TrieNode {
 
-		private static final char EMPTY = 0xfffe;
-
 		private char[] keys = new char[1];
 		private int mask = keys.length - 1;
 		private TrieNode[] nodes = new TrieNode[1];
@@ -140,7 +137,6 @@ public class StringSet {
 
 		protected HashmapNode(boolean root) {
 			super(root);
-			Arrays.fill(keys, EMPTY);
 		}
 
 		public TrieNode get(char c) {
@@ -178,7 +174,7 @@ public class StringSet {
 		@Override
 		public void mapEntries(EntryVisitor visitor) {
 			for (int i = 0; i < keys.length; i++) {
-				if (keys[i] != EMPTY) {
+				if (nodes[i] != null) {
 					TrieNode ret = visitor.visit(this, keys[i], nodes[i]);
 					if (ret != null) {
 						nodes[i] = ret;
@@ -217,11 +213,10 @@ public class StringSet {
 			TrieNode[] oldNodesArray = nodes;
 			keys = new char[oldKeysArray.length * 2];
 			mask = keys.length - 1;
-			Arrays.fill(keys, EMPTY);
 			nodes = new TrieNode[oldNodesArray.length * 2];
 			size = 0;
 			for (int i = 0; i < oldKeysArray.length; i++) {
-				if (oldKeysArray[i] != EMPTY) {
+				if (oldNodesArray[i] != null) {
 					this.put(oldKeysArray[i], oldNodesArray[i]);
 				}
 			}
