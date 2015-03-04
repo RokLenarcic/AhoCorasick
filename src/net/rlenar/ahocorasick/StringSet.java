@@ -12,21 +12,16 @@ class StringSet {
 		// Add all keywords
 		for (final String keyword : keywords) {
 			if (keyword != null && keyword.length() > 0) {
-				HashmapNode node = (HashmapNode) root;
+				HashmapNode currentNode = (HashmapNode) root;
 				for (int idx = 0; idx < keyword.length(); idx++) {
-					HashmapNode t = (HashmapNode) node.get(keyword.charAt(idx));
-					if (t == null) {
-						t = new HashmapNode(false);
-						node.put(keyword.charAt(idx), t);
-					}
-					node = t;
+					currentNode = currentNode.getOrAddChild(keyword.charAt(idx));
 				}
 				// index is past the keyword length
 				// this node is the last node in a keyword
 				// store the keyword as an output
 				// the parameter is offset from the last character
 				// to the first
-				node.output = new Keyword(keyword);
+				currentNode.output = new Keyword(keyword);
 			}
 		}
 		root = visitAll(new EntryVisitor() {
@@ -132,90 +127,90 @@ class StringSet {
 	private final static class HashmapNode extends TrieNode {
 
 		private char[] keys = new char[1];
-		private int mask = keys.length - 1;
-		private TrieNode[] nodes = new TrieNode[1];
-		private int size = 0;
+		private int modulusMask = keys.length - 1;
+		private TrieNode[] children = new TrieNode[1];
+		private int numEntries = 0;
 
 		protected HashmapNode(boolean root) {
 			super(root);
 		}
 
-		public TrieNode get(char c) {
-			int slot = hash(c) & mask;
-			int currentSlot = slot;
+		public HashmapNode getOrAddChild(char key) {
+			if (keys.length < 0x10000 && ((numEntries >= keys.length) || (numEntries > 16 && (numEntries >= keys.length * 0.90f)))) {
+				enlarge();
+			}
+			++numEntries;
+			int defaultSlot = hash(key) & modulusMask;
+			int currentSlot = defaultSlot;
 			do {
-				TrieNode nodeInSlot = nodes[currentSlot];
-				if (nodeInSlot == null) {
-					return null;
-				} else if (keys[currentSlot] == c) {
-					return nodeInSlot;
+				if (children[currentSlot] == null) {
+					keys[currentSlot] = key;
+					HashmapNode newChild = new HashmapNode(false);
+					children[currentSlot] = newChild;
+					return newChild;
+				} else if (keys[currentSlot] == key) {
+					return (HashmapNode) children[currentSlot];
 				} else {
-					currentSlot = ++currentSlot & mask;
+					currentSlot = ++currentSlot & modulusMask;
 				}
-			} while (currentSlot != slot);
-			return null;
+			} while (currentSlot != defaultSlot);
+			throw new IllegalStateException();
 		}
 
 		@Override
-		public TrieNode getTransition(final char c) {
-			int slot = hash(c) & mask;
-			int currentSlot = slot;
+		public TrieNode getTransition(final char key) {
+			int defaultSlot = hash(key) & modulusMask;
+			int currentSlot = defaultSlot;
 			do {
-				if (keys[currentSlot] == c) {
-					return nodes[currentSlot];
-				} else if (nodes[currentSlot] == null) {
+				if (keys[currentSlot] == key) {
+					return children[currentSlot];
+				} else if (children[currentSlot] == null) {
 					return defaultTransition;
 				} else {
-					currentSlot = ++currentSlot & mask;
+					currentSlot = ++currentSlot & modulusMask;
 				}
-			} while (currentSlot != slot);
+			} while (currentSlot != defaultSlot);
 			return defaultTransition;
 		}
 
 		@Override
 		public void mapEntries(EntryVisitor visitor) {
 			for (int i = 0; i < keys.length; i++) {
-				if (nodes[i] != null) {
-					TrieNode ret = visitor.visit(this, keys[i], nodes[i]);
+				if (children[i] != null) {
+					TrieNode ret = visitor.visit(this, keys[i], children[i]);
 					if (ret != null) {
-						nodes[i] = ret;
+						children[i] = ret;
 					}
 				}
 			}
 		}
 
-		public TrieNode put(char c, TrieNode value) {
-			if (keys.length < 0x10000 && ((size + 1 > keys.length) || (size > 16 && (size + 1 > keys.length * 0.90f)))) {
-				enlarge();
-			}
-			++size;
-			int slot = hash(c) & mask;
-			int currentSlot = slot;
-			do {
-				if (nodes[currentSlot] == null || keys[currentSlot] == c) {
-					keys[currentSlot] = c;
-					TrieNode ret = nodes[currentSlot];
-					nodes[currentSlot] = value;
-					return ret;
-				} else {
-					currentSlot = ++currentSlot & mask;
-				}
-			} while (currentSlot != slot);
-			throw new IllegalStateException();
-		}
-
 		private void enlarge() {
-			char[] oldKeysArray = keys;
-			TrieNode[] oldNodesArray = nodes;
-			keys = new char[oldKeysArray.length * 2];
-			mask = keys.length - 1;
-			nodes = new TrieNode[oldNodesArray.length * 2];
-			size = 0;
-			for (int i = 0; i < oldKeysArray.length; i++) {
-				if (oldNodesArray[i] != null) {
-					this.put(oldKeysArray[i], oldNodesArray[i]);
+			char[] biggerKeys = new char[keys.length * 2];
+			TrieNode[] biggerChildren = new TrieNode[children.length * 2];
+			int biggerMask = biggerKeys.length - 1;
+			for (int i = 0; i < children.length; i++) {
+				char key = keys[i];
+				TrieNode node = children[i];
+				if (node != null) {
+					int defaultSlot = hash(key) & biggerMask;
+					int currentSlot = defaultSlot;
+					do {
+						if (biggerChildren[currentSlot] == null) {
+							biggerKeys[currentSlot] = key;
+							biggerChildren[currentSlot] = node;
+							break;
+						} else if (biggerKeys[currentSlot] == key) {
+							throw new IllegalStateException();
+						} else {
+							currentSlot = ++currentSlot & biggerMask;
+						}
+					} while (currentSlot != defaultSlot);
 				}
 			}
+			this.keys = biggerKeys;
+			this.children = biggerChildren;
+			this.modulusMask = biggerMask;
 		}
 
 		private int hash(char c) {
@@ -231,45 +226,45 @@ class StringSet {
 		private static TrieNode optimizeNode(TrieNode n) {
 			if (n instanceof HashmapNode) {
 				HashmapNode node = (HashmapNode) n;
-				char min = '\uffff';
-				char max = 0;
-				int size = node.size;
-				for (int i = 0; i < node.nodes.length; i++) {
-					if (node.nodes[i] != null) {
-						if (node.keys[i] > max) {
-							max = node.keys[i];
+				char minKey = '\uffff';
+				char maxKey = 0;
+				int size = node.numEntries;
+				for (int i = 0; i < node.children.length; i++) {
+					if (node.children[i] != null) {
+						if (node.keys[i] > maxKey) {
+							maxKey = node.keys[i];
 						}
-						if (node.keys[i] < min) {
-							min = node.keys[i];
+						if (node.keys[i] < minKey) {
+							minKey = node.keys[i];
 						}
 					}
 				}
-				int intervalSize = max - min + 1;
-				if (intervalSize <= 8 || (size > (intervalSize) * 0.70)) {
-					return new RangeNode(node, min, max);
+				int keyIntervalSize = maxKey - minKey + 1;
+				if (keyIntervalSize <= 8 || (size > (keyIntervalSize) * 0.70)) {
+					return new RangeNode(node, minKey, maxKey);
 				}
 			}
 			return n;
 		}
 
-		private char base = 0;
+		private char baseChar = 0;
 		private TrieNode[] children;
 		private int size = 0;
 
-		private RangeNode(HashmapNode n, char from, char to) {
-			super(n.defaultTransition != null);
+		private RangeNode(HashmapNode oldNode, char from, char to) {
+			super(oldNode.defaultTransition != null);
 			// Value of the first character
-			this.base = from;
+			this.baseChar = from;
 			this.size = to - from + 1;
-			this.output = n.output;
+			this.output = oldNode.output;
 			if (size > 0) {
 				this.children = new TrieNode[size];
-				if (n.defaultTransition != null) {
+				if (oldNode.defaultTransition != null) {
 					Arrays.fill(children, this);
 				}
-				for (int i = 0; i < n.nodes.length; i++) {
-					if (n.nodes[i] != null) {
-						children[n.keys[i] - from] = n.nodes[i];
+				for (int i = 0; i < oldNode.children.length; i++) {
+					if (oldNode.children[i] != null) {
+						children[oldNode.keys[i] - from] = oldNode.children[i];
 					}
 				}
 			}
@@ -277,7 +272,7 @@ class StringSet {
 
 		@Override
 		public TrieNode getTransition(char c) {
-			int idx = (char) (c - base);
+			int idx = (char) (c - baseChar);
 			if (idx < size) {
 				return children[idx];
 			}
@@ -289,7 +284,7 @@ class StringSet {
 			if (children != null) {
 				for (int i = 0; i < children.length; i++) {
 					if (children[i] != null && children[i] != this) {
-						TrieNode ret = visitor.visit(this, (char) (base + i), children[i]);
+						TrieNode ret = visitor.visit(this, (char) (baseChar + i), children[i]);
 						if (ret != null) {
 							children[i] = ret;
 						}
