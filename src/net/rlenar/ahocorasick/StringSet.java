@@ -1,7 +1,6 @@
 package net.rlenar.ahocorasick;
 
 import java.util.Arrays;
-import java.util.LinkedList;
 
 class StringSet {
 
@@ -26,8 +25,9 @@ class StringSet {
 		}
 		root = optimizeNodes(root);
 
-		// Calculate fail transitions and output sets.
-		root = visitAll(new EntryVisitor() {
+		// Calculate fail transitions and match sets.
+		final Queue queue = new Queue();
+		EntryVisitor queueingVisitor = new EntryVisitor() {
 
 			public TrieNode visit(TrieNode parent, char key, TrieNode value) {
 				if (parent != null) {
@@ -53,10 +53,15 @@ class StringSet {
 						}
 					}
 				}
+				queue.push(value);
 				return null;
 			}
 
-		});
+		};
+		root.mapEntries(queueingVisitor);
+		while (!queue.isEmpty()) {
+			queue.pop().mapEntries(queueingVisitor);
+		}
 	}
 
 	public void match(final String haystack, final MatchListener listener) {
@@ -114,31 +119,6 @@ class StringSet {
 			}
 		}
 		return n;
-	}
-
-	private TrieNode visitAll(final EntryVisitor visitor) {
-		final LinkedList<TrieNode> queue = new LinkedList<TrieNode>();
-		TrieNode ret = visitor.visit(null, '\ufffe', root);
-		if (ret == null) {
-			ret = root;
-		}
-		EntryVisitor queueingVisitor = new EntryVisitor() {
-
-			public TrieNode visit(TrieNode parent, char key, TrieNode value) {
-				TrieNode ret = visitor.visit(parent, key, value);
-				if (ret != null) {
-					queue.add(ret);
-				} else {
-					queue.add(value);
-				}
-				return ret;
-			}
-		};
-		ret.mapEntries(queueingVisitor);
-		while (!queue.isEmpty()) {
-			queue.poll().mapEntries(queueingVisitor);
-		}
-		return ret;
 	}
 
 	private interface EntryVisitor {
@@ -240,6 +220,47 @@ class StringSet {
 			return (((0x811c9dc5 ^ (c >> 8)) * HASH_PRIME) ^ (c & 0xff)) * HASH_PRIME;
 		}
 
+	}
+
+	private static class Queue {
+
+		private QueueNode first;
+		private QueueNode last;
+
+		boolean isEmpty() {
+			return first == null;
+		}
+
+		TrieNode pop() {
+			if (first != null) {
+				TrieNode ret = first.n;
+				first = first.next;
+				if (first == null) {
+					last = null;
+				}
+				return ret;
+			} else {
+				return null;
+			}
+		}
+
+		void push(TrieNode n) {
+			if (last != null) {
+				last.next = new QueueNode(n);
+				last = last.next;
+			} else {
+				first = last = new QueueNode(n);
+			}
+		}
+
+		private static class QueueNode {
+			TrieNode n;
+			QueueNode next;
+
+			private QueueNode(TrieNode n) {
+				this.n = n;
+			}
+		}
 	}
 
 	private static final class RangeNode extends TrieNode {
