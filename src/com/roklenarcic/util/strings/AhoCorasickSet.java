@@ -2,11 +2,11 @@ package com.roklenarcic.util.strings;
 
 import java.util.Arrays;
 
-class StringSet {
+class AhoCorasickSet {
 
 	private TrieNode root;
 
-	public StringSet(final Iterable<String> keywords) {
+	public AhoCorasickSet(final Iterable<String> keywords) {
 		root = new HashmapNode(true);
 		// Add all keywords
 		for (final String keyword : keywords) {

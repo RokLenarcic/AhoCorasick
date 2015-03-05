@@ -17,18 +17,18 @@ import org.junit.Test;
 import org.junit.rules.TestName;
 
 import com.roklenarcic.util.strings.MatchListener;
-import com.roklenarcic.util.strings.StringSet;
+import com.roklenarcic.util.strings.AhoCorasickSet;
 
-public class BasicTest {
+public class AhoCorasickTest {
 
 	public static void main(final String[] args) throws IOException {
 		System.in.read();
-		new BasicTest(true, 1000000).testLiteral();
-		new BasicTest(true, 1000000).testOverlap();
-		new BasicTest(true, 1000000).testLongKeywords();
-		new BasicTest(true, 1000000).testFullRandom();
-		new BasicTest(true, 1000000).testFailureTransitions();
-		new BasicTest(true, 1000000).testDictionary();
+		new AhoCorasickTest(true, 1000000).testLiteral();
+		new AhoCorasickTest(true, 1000000).testOverlap();
+		new AhoCorasickTest(true, 1000000).testLongKeywords();
+		new AhoCorasickTest(true, 1000000).testFullRandom();
+		new AhoCorasickTest(true, 1000000).testFailureTransitions();
+		new AhoCorasickTest(true, 1000000).testDictionary();
 	}
 
 	@Rule
@@ -37,11 +37,11 @@ public class BasicTest {
 	private final boolean printTimesOnly;
 	private int testLoopSize = 10000;
 
-	public BasicTest() {
+	public AhoCorasickTest() {
 		this(false, 10000);
 	}
 
-	private BasicTest(final boolean printTimesOnly, int testLoopSize) {
+	private AhoCorasickTest(final boolean printTimesOnly, int testLoopSize) {
 		this.printTimesOnly = printTimesOnly;
 		this.testLoopSize = testLoopSize;
 	}
@@ -126,7 +126,7 @@ public class BasicTest {
 
 	private void test(final String haystack, final String... needles) {
 		final List<String> keywords = Arrays.asList(needles);
-		final StringSet set = new StringSet(keywords);
+		final AhoCorasickSet set = new AhoCorasickSet(keywords);
 		System.gc();
 		try {
 			Thread.sleep(500);
