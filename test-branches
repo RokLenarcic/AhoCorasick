@@ -5,19 +5,19 @@ echo -e "Testing branch $1\n"
 git checkout $1
 
 rm -rf bin/*
-javac -d bin/ src/net/rlenar/ahocorasick/*
-javac -cp "bin/:$JUNIT" -d bin/ test/net/rlenar/ahocorasick/*
+javac -d bin/ src/com/roklenarcic/util/strings/*
+javac -cp "bin/:$JUNIT" -d bin/ test/com/roklenarcic/util/strings/*
 
-java -cp "bin/:$JUNIT" -Xverify:none net.rlenar.ahocorasick.BasicTest
+java -cp "bin/:$JUNIT" -Xverify:none com.roklenarcic.util.strings.BasicTest
 
 echo -e "\nTesing branch $2\n"
 
 git checkout $2
 
 rm -rf bin/*
-javac -d bin/ src/net/rlenar/ahocorasick/*
-javac -cp "bin/:$JUNIT" -d bin/ test/net/rlenar/ahocorasick/*
+javac -d bin/ src/com/roklenarcic/util/strings/*
+javac -cp "bin/:$JUNIT" -d bin/ test/com/roklenarcic/util/strings/*
 
-java -cp "bin/:$JUNIT" -Xverify:none net.rlenar.ahocorasick.BasicTest
+java -cp "bin/:$JUNIT" -Xverify:none com.roklenarcic.util.strings.BasicTest
 
 rm *.class

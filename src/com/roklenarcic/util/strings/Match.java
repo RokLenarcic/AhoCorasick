@@ -1,4 +1,4 @@
-package net.rlenar.ahocorasick;
+package com.roklenarcic.util.strings;
 
 final class Match {
 	Match subMatch;

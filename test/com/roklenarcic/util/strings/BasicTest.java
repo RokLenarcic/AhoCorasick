@@ -1,4 +1,4 @@
-package net.rlenar.ahocorasick;
+package com.roklenarcic.util.strings;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -15,6 +15,9 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
+
+import com.roklenarcic.util.strings.MatchListener;
+import com.roklenarcic.util.strings.StringSet;
 
 public class BasicTest {
 

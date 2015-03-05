@@ -1,4 +1,4 @@
-package net.rlenar.ahocorasick;
+package com.roklenarcic.util.strings;
 
 public interface MatchListener {
 
