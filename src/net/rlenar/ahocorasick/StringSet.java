@@ -24,11 +24,7 @@ class StringSet {
 				currentNode.match = new Match(keyword);
 			}
 		}
-		root = visitAll(new EntryVisitor() {
-			public TrieNode visit(TrieNode parent, char key, TrieNode value) {
-				return optimizeNode(value);
-			}
-		});
+		root = optimizeNodes(root);
 
 		// Calculate fail transitions and output sets.
 		root = visitAll(new EntryVisitor() {
@@ -95,7 +91,7 @@ class StringSet {
 		}
 	}
 
-	private final TrieNode optimizeNode(TrieNode n) {
+	private final TrieNode optimizeNodes(TrieNode n) {
 		if (n instanceof HashmapNode) {
 			HashmapNode node = (HashmapNode) n;
 			char minKey = '\uffff';
@@ -103,6 +99,7 @@ class StringSet {
 			int size = node.numEntries;
 			for (int i = 0; i < node.children.length; i++) {
 				if (node.children[i] != null) {
+					node.children[i] = optimizeNodes(node.children[i]);
 					if (node.keys[i] > maxKey) {
 						maxKey = node.keys[i];
 					}
