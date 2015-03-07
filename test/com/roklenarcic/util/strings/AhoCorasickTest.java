@@ -16,9 +16,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
 
-import com.roklenarcic.util.strings.MatchListener;
-import com.roklenarcic.util.strings.AhoCorasickSet;
-
 public class AhoCorasickTest {
 
 	public static void main(final String[] args) throws IOException {
@@ -71,6 +68,15 @@ public class AhoCorasickTest {
 	@Test
 	public void testFailureTransitions() {
 		test("abbccddeef", "bc", "cc", "bcc", "ccddee", "ccddeee", "d");
+	}
+
+	@Test
+	public void testFullNode() {
+		final String[] keywords = new String[65536];
+		for (int i = 0; i < keywords.length; i++) {
+			keywords[i] = String.valueOf((char) i);
+		}
+		test("\u0000\uffff\ufffe", keywords);
 	}
 
 	@Test
@@ -161,7 +167,8 @@ public class AhoCorasickTest {
 		if (printTimesOnly) {
 			System.out.println(time);
 		} else {
-			System.out.println(haystack + " in " + name.getMethodName() + " searched (matches " + listener.count + ") in " + time + "ns");
+			String haystackShort = haystack.length() > 20 ? haystack.substring(0, 20) + "..." : haystack;
+			System.out.println(haystackShort + " in " + name.getMethodName() + " searched (matches " + listener.count + ") in " + time + "ns");
 		}
 		// Check count
 		final long countStartTime = System.nanoTime();
