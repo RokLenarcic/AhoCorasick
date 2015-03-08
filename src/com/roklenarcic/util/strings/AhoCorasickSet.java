@@ -105,27 +105,53 @@ class AhoCorasickSet {
 		int idx = 0;
 		// For each character.
 		final int len = haystack.length();
-		while (idx < len) {
-			final char c = caseSensitive ? haystack.charAt(idx) : Character.toLowerCase(haystack.charAt(idx));
-			// Try to transition from the current node using the character
-			TrieNode nextNode = currentNode.getTransition(c);
+		if (caseSensitive) {
+			while (idx < len) {
+				final char c = haystack.charAt(idx);
+				// Try to transition from the current node using the character
+				TrieNode nextNode = currentNode.getTransition(c);
 
-			// If cannot transition, follow the fail transition until finding
-			// node X where you can transition to another node Y using this
-			// character. Take the transition.
-			while (nextNode == null) {
-				// Transition follow one fail transition
-				currentNode = currentNode.getFailTransition();
-				// See if you can transition to another node with this
-				// character. Note that root node will return itself for any
-				// missing transition.
-				nextNode = currentNode.getTransition(c);
+				// If cannot transition, follow the fail transition until finding
+				// node X where you can transition to another node Y using this
+				// character. Take the transition.
+				while (nextNode == null) {
+					// Transition follow one fail transition
+					currentNode = currentNode.getFailTransition();
+					// See if you can transition to another node with this
+					// character. Note that root node will return itself for any
+					// missing transition.
+					nextNode = currentNode.getTransition(c);
+				}
+				// Take the transition.
+				currentNode = nextNode;
+				// Output any matches on the current node and increase the index
+				if (!currentNode.output(listener, ++idx)) {
+					break;
+				}
 			}
-			// Take the transition.
-			currentNode = nextNode;
-			// Output any matches on the current node and increase the index
-			if (!currentNode.output(listener, ++idx)) {
-				break;
+		} else {
+			while (idx < len) {
+				final char c = Character.toLowerCase(haystack.charAt(idx));
+				// Try to transition from the current node using the character
+				TrieNode nextNode = currentNode.getTransition(c);
+
+				// If cannot transition, follow the fail transition until finding
+				// node X where you can transition to another node Y using this
+				// character. Take the transition.
+				while (nextNode == null) {
+					// Transition follow one fail transition
+					currentNode = currentNode.getFailTransition();
+					// See if you can transition to another node with this
+					// character. Note that root node will return itself for any
+					// missing transition.
+					nextNode = currentNode.getTransition(c);
+				}
+				// Take the transition.
+				currentNode = nextNode;
+				// Output any matches on the current node and increase the index
+				if (!currentNode.output(listener, ++idx)) {
+					break;
+				}
 			}
 		}
 	}
