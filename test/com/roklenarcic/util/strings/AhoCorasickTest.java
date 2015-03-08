@@ -132,7 +132,7 @@ public class AhoCorasickTest {
 
 	private void test(final String haystack, final String... needles) {
 		final List<String> keywords = Arrays.asList(needles);
-		final AhoCorasickSet set = new AhoCorasickSet(keywords);
+		final AhoCorasickSet set = new AhoCorasickSet(keywords, true);
 		System.gc();
 		try {
 			Thread.sleep(500);

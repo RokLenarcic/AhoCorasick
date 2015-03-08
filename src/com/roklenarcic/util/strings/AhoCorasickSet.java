@@ -7,9 +7,10 @@ import java.util.Arrays;
 // It is highly optimized for this particular use.
 class AhoCorasickSet {
 
+	private boolean caseSensitive = true;
 	private TrieNode root;
 
-	public AhoCorasickSet(final Iterable<String> keywords) {
+	public AhoCorasickSet(final Iterable<String> keywords, boolean caseSensitive) {
 		// Create the root node
 		root = new HashmapNode(true);
 		// Add all keywords
@@ -21,7 +22,7 @@ class AhoCorasickSet {
 				// fill out the tree.
 				HashmapNode currentNode = (HashmapNode) root;
 				for (int idx = 0; idx < keyword.length(); idx++) {
-					currentNode = currentNode.getOrAddChild(keyword.charAt(idx));
+					currentNode = currentNode.getOrAddChild(caseSensitive ? keyword.charAt(idx) : Character.toLowerCase(keyword.charAt(idx)));
 				}
 				// Last node will contains the keyword as a match.
 				// Suffix matches will be added later.
@@ -105,7 +106,7 @@ class AhoCorasickSet {
 		// For each character.
 		final int len = haystack.length();
 		while (idx < len) {
-			final char c = haystack.charAt(idx);
+			final char c = caseSensitive ? haystack.charAt(idx) : Character.toLowerCase(haystack.charAt(idx));
 			// Try to transition from the current node using the character
 			TrieNode nextNode = currentNode.getTransition(c);
 
