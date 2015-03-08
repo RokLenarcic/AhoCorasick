@@ -105,6 +105,8 @@ class AhoCorasickSet {
 		int idx = 0;
 		// For each character.
 		final int len = haystack.length();
+		// Putting this if into the loop worsens the performance so we'll sadly
+		// have to deal with duplicated code.
 		if (caseSensitive) {
 			while (idx < len) {
 				final char c = haystack.charAt(idx);
