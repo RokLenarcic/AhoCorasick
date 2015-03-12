@@ -26,7 +26,7 @@ class AhoCorasickSet {
 				}
 				// Last node will contains the keyword as a match.
 				// Suffix matches will be added later.
-				currentNode.match = new Match(keyword);
+				currentNode.match = new String[] { keyword };
 			}
 		}
 		// Go through nodes depth first, swap any hashmap nodes,
@@ -81,7 +81,12 @@ class AhoCorasickSet {
 					if (value.match == null) {
 						value.match = value.failTransition.getMatch();
 					} else {
-						value.match.subMatch = value.failTransition.getMatch();
+						if (value.failTransition.getMatch() != null) {
+							String[] matches = new String[value.failTransition.getMatch().length + 1];
+							matches[0] = value.match[0];
+							System.arraycopy(value.failTransition.getMatch(), 0, matches, 1, value.failTransition.getMatch().length);
+							value.match = matches;
+						}
 					}
 				}
 				// Queue the non-leaf node.
@@ -413,7 +418,7 @@ class AhoCorasickSet {
 
 		protected TrieNode defaultTransition = null;
 		protected TrieNode failTransition;
-		protected Match match;
+		protected String[] match;
 
 		protected TrieNode(boolean root) {
 			this.defaultTransition = root ? this : null;
@@ -425,7 +430,7 @@ class AhoCorasickSet {
 		}
 
 		// Get linked list of outputs at this node. Used in building the tree.
-		public final Match getMatch() {
+		public final String[] getMatch() {
 			return match;
 		}
 
@@ -440,13 +445,14 @@ class AhoCorasickSet {
 		public final boolean output(MatchListener listener, int idx) {
 			// since idx is the last character in the match
 			// position it past the match (to be consistent with conventions)
-			Match k = match;
-			boolean ret = true;
-			while (k != null && ret) {
-				ret = listener.match(k.word, idx);
-				k = k.subMatch;
+			if (match != null) {
+				for (String s : match) {
+					if (!listener.match(s, idx)) {
+						return false;
+					}
+				}
 			}
-			return ret;
+			return true;
 		}
 	}
 }
