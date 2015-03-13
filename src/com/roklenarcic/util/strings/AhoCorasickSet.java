@@ -26,7 +26,7 @@ class AhoCorasickSet {
 				}
 				// Last node will contains the keyword as a match.
 				// Suffix matches will be added later.
-				currentNode.match = new Match(keyword);
+				currentNode.match = keyword;
 			}
 		}
 		// Go through nodes depth first, swap any hashmap nodes,
@@ -78,10 +78,17 @@ class AhoCorasickSet {
 					// "abc" and also its failure transtion's matches ("bc", "c")
 					// "ab" has no match of its own, but it matches failure transition's
 					// match "b".
-					if (value.match == null) {
-						value.match = value.failTransition.getMatch();
-					} else {
-						value.match.subMatch = value.failTransition.getMatch();
+					TrieNode fail = value.failTransition;
+					while (fail != root && fail.match == null) {
+						fail = fail.failTransition;
+					}
+					if (fail.match != null) {
+						if (value.match == null) {
+							value.match = fail.match;
+							value.suffixMatch = fail.suffixMatch;
+						} else {
+							value.suffixMatch = fail;
+						}
 					}
 				}
 				// Queue the non-leaf node.
@@ -413,7 +420,8 @@ class AhoCorasickSet {
 
 		protected TrieNode defaultTransition = null;
 		protected TrieNode failTransition;
-		protected Match match;
+		protected String match;
+		protected TrieNode suffixMatch;
 
 		protected TrieNode(boolean root) {
 			this.defaultTransition = root ? this : null;
@@ -422,11 +430,6 @@ class AhoCorasickSet {
 		// Get fail transition
 		public final TrieNode getFailTransition() {
 			return failTransition;
-		}
-
-		// Get linked list of outputs at this node. Used in building the tree.
-		public final Match getMatch() {
-			return match;
 		}
 
 		// Get transition (root node returns something non-null for all characters - itself)
@@ -440,11 +443,14 @@ class AhoCorasickSet {
 		public final boolean output(MatchListener listener, int idx) {
 			// since idx is the last character in the match
 			// position it past the match (to be consistent with conventions)
-			Match k = match;
 			boolean ret = true;
-			while (k != null && ret) {
-				ret = listener.match(k.word, idx);
-				k = k.subMatch;
+			if (match != null) {
+				ret = listener.match(match, idx);
+				TrieNode suffixMatch = this.suffixMatch;
+				while (suffixMatch != null && ret) {
+					ret = listener.match(suffixMatch.match, idx);
+					suffixMatch = suffixMatch.suffixMatch;
+				}
 			}
 			return ret;
 		}
