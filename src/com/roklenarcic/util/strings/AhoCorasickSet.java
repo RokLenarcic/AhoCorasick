@@ -40,7 +40,7 @@ class AhoCorasickSet {
 		// for all 2 letter words.
 		//
 		// Setup a queue to enable breath-first processing.
-		final Queue queue = new Queue();
+		final TrieNodeQueue queue = new TrieNodeQueue();
 		EntryVisitor queueingVisitor = new EntryVisitor() {
 
 			public void visit(TrieNode parent, char key, TrieNode value) {
@@ -312,48 +312,6 @@ class AhoCorasickSet {
 
 	}
 
-	// Single-linked list
-	private static class Queue {
-
-		private QueueNode first;
-		private QueueNode last;
-
-		boolean isEmpty() {
-			return first == null;
-		}
-
-		TrieNode pop() {
-			if (first != null) {
-				TrieNode ret = first.n;
-				first = first.next;
-				if (first == null) {
-					last = null;
-				}
-				return ret;
-			} else {
-				return null;
-			}
-		}
-
-		void push(TrieNode n) {
-			if (last != null) {
-				last.next = new QueueNode(n);
-				last = last.next;
-			} else {
-				first = last = new QueueNode(n);
-			}
-		}
-
-		private static class QueueNode {
-			TrieNode n;
-			QueueNode next;
-
-			private QueueNode(TrieNode n) {
-				this.n = n;
-			}
-		}
-	}
-
 	// This node is good at representing dense ranges of keys.
 	// It has a single array of nodes and a base key value.
 	// Child at array index 3 has key of baseChar + 3.
@@ -454,5 +412,49 @@ class AhoCorasickSet {
 			}
 			return ret;
 		}
+	}
+
+	// Single-linked list
+	private static class TrieNodeQueue {
+
+		private TrieNode[] arr = new TrieNode[50];
+		private int first = 0;
+		private int last = 0;
+
+		boolean isEmpty() {
+			return first == last;
+		}
+
+		TrieNode pop() {
+			if (!isEmpty()) {
+				TrieNode ret = arr[first];
+				first = ++first % arr.length;
+				return ret;
+			} else {
+				return null;
+			}
+		}
+
+		void push(TrieNode n) {
+			if (((last + 1) % arr.length) == first) {
+				int newCapacity = arr.length + (arr.length >> 1);
+				if (newCapacity < 0) {
+					newCapacity = Integer.MAX_VALUE - 8;
+				}
+				TrieNode[] newArr = new TrieNode[newCapacity];
+				if (first <= last) {
+					System.arraycopy(arr, first, newArr, first, last - first);
+				} else {
+					System.arraycopy(arr, first, newArr, 0, arr.length - first);
+					System.arraycopy(arr, 0, newArr, arr.length - first, last);
+					last += arr.length - first;
+					first = 0;
+				}
+				arr = newArr;
+			}
+			arr[last] = n;
+			last = ++last % arr.length;
+		}
+
 	}
 }
