@@ -41,7 +41,7 @@ class AhoCorasickSet {
 		//
 		// Setup a queue to enable breath-first processing.
 		final TrieNodeQueue queue = new TrieNodeQueue();
-		EntryVisitor queueingVisitor = new EntryVisitor() {
+		EntryVisitor failTransAndOutputsVisitor = new EntryVisitor() {
 
 			public void visit(TrieNode parent, char key, TrieNode value) {
 				// Get fail transiton of the parent.
@@ -98,10 +98,47 @@ class AhoCorasickSet {
 			}
 
 		};
-		root.mapEntries(queueingVisitor);
+		root.mapEntries(failTransAndOutputsVisitor);
 		while (!queue.isEmpty()) {
-			queue.pop().mapEntries(queueingVisitor);
+			queue.pop().mapEntries(failTransAndOutputsVisitor);
 		}
+		// Fill out ranged nodes depth first otherwise the filled out extra nodes
+		// get queued and you get an endless queue.
+		EntryVisitor fillOutRangeNodesVisitor = new EntryVisitor() {
+
+			public void visit(TrieNode parent, char key, TrieNode value) {
+				// go depth first
+				if (!value.isEmpty()) {
+					value.mapEntries(this);
+				}
+				if (value instanceof RangeNode) {
+					// Range nodes have gaps (null values) in their array. We can put this wasted
+					// memory to work by filling these gaps with the correct next node for that character
+					// which we can figure out by following failure transitions.
+					RangeNode rangeNode = (RangeNode) value;
+					for (int i = 0; i < rangeNode.size; i++) {
+						if (rangeNode.children[i] == null) {
+							char charOfMissingTransition = (char) (rangeNode.baseChar + i);
+							// Walk up fail transition until you run out of them (and do nothing)
+							// or one of them has a transition for this char. Put that node
+							// into the empty slot on the range node.
+							TrieNode n = rangeNode.failTransition;
+							while (n != null) {
+								TrieNode nextNode = n.getTransition(charOfMissingTransition);
+								if (nextNode == null) {
+									n = n.failTransition;
+								} else {
+									rangeNode.children[i] = nextNode;
+									break;
+								}
+							}
+						}
+					}
+				}
+			}
+
+		};
+		root.mapEntries(fillOutRangeNodesVisitor);
 	}
 
 	public void match(final String haystack, final MatchListener listener) {
