@@ -120,9 +120,6 @@ public class AhoCorasickTest {
 					buf[j] = (char) r.nextInt(256);
 				} else {
 					buf[j] = (char) r.nextInt();
-					if (buf[j] == '\ufffe') {
-						buf[j] = '\uffff';
-					}
 				}
 			}
 			ret.add(new String(buf, 0, r.nextInt(maxSize - minSize) + minSize));
