@@ -2,30 +2,37 @@ package com.roklenarcic.util.strings;
 
 import java.util.Arrays;
 
-// Standard Aho-Corasick set
-// It matches all occurences of the strings in the set anywhere.
+// No overlaps, shortest match set.
+// Keywords which have a prefix in the set will never get matched,
+// e.g. set containing "abc" and "ab" will never match "abc".
+// This set is of limited use, but it will save time and memory when
+// the user knows their string are not each others' prefix. (e.g. a list of IPs).
 // It is highly optimized for this particular use.
-class AhoCorasickSet {
+class ShortestMatchSet {
 
 	private boolean caseSensitive = true;
 	private TrieNode root;
 
-	public AhoCorasickSet(final Iterable<String> keywords, boolean caseSensitive) {
+	public ShortestMatchSet(final Iterable<String> keywords, boolean caseSensitive) {
 		// Create the root node
 		root = new HashmapNode(true);
 		// Add all keywords
-		for (final String keyword : keywords) {
+		KEYWORD_LOOP: for (final String keyword : keywords) {
 			// Skip any empty keywords
 			if (keyword != null && keyword.length() > 0) {
 				// Start with the current node and traverse the tree
 				// character by character. Add nodes as needed to
 				// fill out the tree.
 				HashmapNode currentNode = (HashmapNode) root;
+				// Don't bother adding nodes to nodes that have output.
 				for (int idx = 0; idx < keyword.length(); idx++) {
+					if (currentNode.match != null) {
+						// This keyword will never match, go to next keyword.
+						continue KEYWORD_LOOP;
+					}
 					currentNode = currentNode.getOrAddChild(caseSensitive ? keyword.charAt(idx) : Character.toLowerCase(keyword.charAt(idx)));
 				}
 				// Last node will contains the keyword as a match.
-				// Suffix matches will be added later.
 				currentNode.match = keyword;
 			}
 		}
@@ -34,74 +41,6 @@ class AhoCorasickSet {
 		// flat array based nodes.
 		root = optimizeNodes(root);
 
-		// Calculate fail transitions and add suffix matches to nodes.
-		// A lot of these properties are defined in a recursive fashion i.e.
-		// calculating for a 3 letter word requires having done the calculation
-		// for all 2 letter words.
-		//
-		// Setup a queue to enable breath-first processing.
-		final Queue<TrieNode> queue = new Queue<TrieNode>();
-		EntryVisitor failTransAndOutputsVisitor = new EntryVisitor() {
-
-			public void visit(TrieNode parent, char key, TrieNode value) {
-				// Get fail transiton of the parent.
-				TrieNode parentFail = parent.getFailTransition();
-				// Since root node has null fail transition, first level nodes have null parentFail.
-				if (parentFail == null) {
-					// First level nodes have one possible fail transition, which is
-					// root because the only possible suffix to a one character
-					// string is an empty string
-					value.failTransition = parent;
-				} else {
-					// Dig up the tree until you find a fail transition.
-					do {
-						// suffix of parent + key = suffix of this node
-						// parent -> char -> value
-						// parentFail -> char -> valueFail
-						// e.g. "ab" -> c -> "abc"
-						// "b" -> c -> "bc"
-						final TrieNode matchContinuation = parentFail.getTransition(key);
-						if (matchContinuation != null) {
-							value.failTransition = matchContinuation;
-						} else {
-							// If parentFail didn't have key mapping
-							// take parentFail's failTransition and try again
-							// The last fail transition is the root node, which
-							// always has a key mapping.
-							parentFail = parentFail.getFailTransition();
-						}
-					} while (value.failTransition == null);
-					// Now that we have a fail transition, this node matches all
-					// the matches of it's failTransition node in addition to any
-					// match it already has.
-					// e.g for keywords "abc", "bc", "c", "b", the "abc" node matches
-					// "abc" and also its failure transtion's matches ("bc", "c")
-					// "ab" has no match of its own, but it matches failure transition's
-					// match "b".
-					TrieNode fail = value.failTransition;
-					while (fail != root && fail.match == null) {
-						fail = fail.failTransition;
-					}
-					if (fail.match != null) {
-						if (value.match == null) {
-							value.match = fail.match;
-							value.suffixMatch = fail.suffixMatch;
-						} else {
-							value.suffixMatch = fail;
-						}
-					}
-				}
-				// Queue the non-leaf node.
-				if (!value.isEmpty()) {
-					queue.push(value);
-				}
-			}
-
-		};
-		root.mapEntries(failTransAndOutputsVisitor);
-		while (!queue.isEmpty()) {
-			queue.pop().mapEntries(failTransAndOutputsVisitor);
-		}
 		// Fill out ranged nodes depth first otherwise the filled out extra nodes
 		// get queued and you get an endless queue.
 		EntryVisitor fillOutRangeNodesVisitor = new EntryVisitor() {
@@ -119,19 +58,8 @@ class AhoCorasickSet {
 					for (int i = 0; i < rangeNode.size; i++) {
 						if (rangeNode.children[i] == null) {
 							char charOfMissingTransition = (char) (rangeNode.baseChar + i);
-							// Walk up fail transition until you run out of them (and do nothing)
-							// or one of them has a transition for this char. Put that node
-							// into the empty slot on the range node.
-							TrieNode n = rangeNode.failTransition;
-							while (n != null) {
-								TrieNode nextNode = n.getTransition(charOfMissingTransition);
-								if (nextNode == null) {
-									n = n.failTransition;
-								} else {
-									rangeNode.children[i] = nextNode;
-									break;
-								}
-							}
+							// Simply take the transition out of the root node.
+							rangeNode.children[i] = root.getTransition(charOfMissingTransition);
 						}
 					}
 				}
@@ -155,21 +83,12 @@ class AhoCorasickSet {
 			while (idx < len) {
 				final char c = haystack.charAt(idx);
 				// Try to transition from the current node using the character
-				TrieNode nextNode = currentNode.getTransition(c);
+				currentNode = currentNode.getTransition(c);
 
-				// If cannot transition, follow the fail transition until finding
-				// node X where you can transition to another node Y using this
-				// character. Take the transition.
-				while (nextNode == null) {
-					// Transition follow one fail transition
-					currentNode = currentNode.getFailTransition();
-					// See if you can transition to another node with this
-					// character. Note that root node will return itself for any
-					// missing transition.
-					nextNode = currentNode.getTransition(c);
+				// If cannot transition, take transition from root
+				if (currentNode == null) {
+					currentNode = root.getTransition(c);
 				}
-				// Take the transition.
-				currentNode = nextNode;
 				// Output any matches on the current node and increase the index
 				if (!currentNode.output(listener, ++idx)) {
 					break;
@@ -179,21 +98,12 @@ class AhoCorasickSet {
 			while (idx < len) {
 				final char c = Character.toLowerCase(haystack.charAt(idx));
 				// Try to transition from the current node using the character
-				TrieNode nextNode = currentNode.getTransition(c);
+				currentNode = currentNode.getTransition(c);
 
-				// If cannot transition, follow the fail transition until finding
-				// node X where you can transition to another node Y using this
-				// character. Take the transition.
-				while (nextNode == null) {
-					// Transition follow one fail transition
-					currentNode = currentNode.getFailTransition();
-					// See if you can transition to another node with this
-					// character. Note that root node will return itself for any
-					// missing transition.
-					nextNode = currentNode.getTransition(c);
+				// If cannot transition, take transition from root
+				if (currentNode == null) {
+					currentNode = root.getTransition(c);
 				}
-				// Take the transition.
-				currentNode = nextNode;
 				// Output any matches on the current node and increase the index
 				if (!currentNode.output(listener, ++idx)) {
 					break;
@@ -250,6 +160,12 @@ class AhoCorasickSet {
 
 		protected HashmapNode(boolean root) {
 			super(root);
+		}
+
+		@Override
+		public TrieNode cloneWith(String thisMatch, TrieNode thisDefaultTransiption) {
+			// TODO Auto-generated method stub
+			return null;
 		}
 
 		@Override
@@ -381,6 +297,12 @@ class AhoCorasickSet {
 		}
 
 		@Override
+		public TrieNode cloneWith(String thisMatch, TrieNode thisDefaultTransiption) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
 		public TrieNode getTransition(char c) {
 			// First check if the key is between max and min value.
 			// Here we use the fact that char type is unsigned to figure it out
@@ -414,18 +336,13 @@ class AhoCorasickSet {
 	private static abstract class TrieNode {
 
 		protected TrieNode defaultTransition = null;
-		protected TrieNode failTransition;
 		protected String match;
-		protected TrieNode suffixMatch;
 
 		protected TrieNode(boolean root) {
 			this.defaultTransition = root ? this : null;
 		}
 
-		// Get fail transition
-		public final TrieNode getFailTransition() {
-			return failTransition;
-		}
+		public abstract TrieNode cloneWith(String thisMatch, TrieNode thisDefaultTransiption);
 
 		// Get transition (root node returns something non-null for all characters - itself)
 		public abstract TrieNode getTransition(char c);
@@ -438,16 +355,10 @@ class AhoCorasickSet {
 		public final boolean output(MatchListener listener, int idx) {
 			// since idx is the last character in the match
 			// position it past the match (to be consistent with conventions)
-			boolean ret = true;
 			if (match != null) {
-				ret = listener.match(match, idx);
-				TrieNode suffixMatch = this.suffixMatch;
-				while (suffixMatch != null && ret) {
-					ret = listener.match(suffixMatch.match, idx);
-					suffixMatch = suffixMatch.suffixMatch;
-				}
+				return listener.match(match, idx);
 			}
-			return ret;
+			return true;
 		}
 	}
 

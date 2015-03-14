@@ -2,15 +2,12 @@ package com.roklenarcic.util.strings;
 
 import java.util.Arrays;
 
-// Standard Aho-Corasick set
-// It matches all occurences of the strings in the set anywhere.
-// It is highly optimized for this particular use.
-class AhoCorasickSet {
-
+// This set matches longest non-overlapping strings.
+class LongestMatchSet {
 	private boolean caseSensitive = true;
 	private TrieNode root;
 
-	public AhoCorasickSet(final Iterable<String> keywords, boolean caseSensitive) {
+	public LongestMatchSet(final Iterable<String> keywords, boolean caseSensitive) {
 		// Create the root node
 		root = new HashmapNode(true);
 		// Add all keywords
@@ -450,5 +447,4 @@ class AhoCorasickSet {
 			return ret;
 		}
 	}
-
 }

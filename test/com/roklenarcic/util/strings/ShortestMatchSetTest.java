@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
@@ -16,16 +17,16 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
 
-public class AhoCorasickTest {
+public class ShortestMatchSetTest {
 
 	public static void main(final String[] args) throws IOException {
 		System.in.read();
-		new AhoCorasickTest(true, 1000000).testLiteral();
-		new AhoCorasickTest(true, 1000000).testOverlap();
-		new AhoCorasickTest(true, 1000000).testLongKeywords();
-		new AhoCorasickTest(true, 1000000).testFullRandom();
-		new AhoCorasickTest(true, 1000000).testFailureTransitions();
-		new AhoCorasickTest(true, 1000000).testDictionary();
+		new ShortestMatchSetTest(true, 1000000).testLiteral();
+		new ShortestMatchSetTest(true, 1000000).testOverlap();
+		new ShortestMatchSetTest(true, 1000000).testLongKeywords();
+		new ShortestMatchSetTest(true, 1000000).testFullRandom();
+		new ShortestMatchSetTest(true, 1000000).testFailureTransitions();
+		new ShortestMatchSetTest(true, 1000000).testDictionary();
 	}
 
 	@Rule
@@ -34,11 +35,11 @@ public class AhoCorasickTest {
 	private final boolean printTimesOnly;
 	private int testLoopSize = 10000;
 
-	public AhoCorasickTest() {
+	public ShortestMatchSetTest() {
 		this(false, 10000);
 	}
 
-	private AhoCorasickTest(final boolean printTimesOnly, int testLoopSize) {
+	private ShortestMatchSetTest(final boolean printTimesOnly, int testLoopSize) {
 		this.printTimesOnly = printTimesOnly;
 		this.testLoopSize = testLoopSize;
 	}
@@ -128,8 +129,14 @@ public class AhoCorasickTest {
 	}
 
 	private void test(final String haystack, final String... needles) {
+		Arrays.sort(needles, new Comparator<String>() {
+
+			public int compare(String o1, String o2) {
+				return o1.length() - o2.length();
+			}
+		});
 		final List<String> keywords = Arrays.asList(needles);
-		final AhoCorasickSet set = new AhoCorasickSet(keywords, true);
+		final ShortestMatchSet set = new ShortestMatchSet(keywords, true);
 		System.gc();
 		try {
 			Thread.sleep(500);
@@ -163,22 +170,24 @@ public class AhoCorasickTest {
 		if (printTimesOnly) {
 			System.out.println(time);
 		} else {
-			String haystackShort = haystack.length() > 20 ? haystack.substring(0, 20) + "..." : haystack;
+			String haystackShort = haystack.length() > 40 ? haystack.substring(0, 40) + "..." : haystack;
 			System.out.println(haystackShort + " in " + name.getMethodName() + " searched (matches " + listener.count + ") in " + time + "ns");
 		}
 		// Check count
 		final long countStartTime = System.nanoTime();
 		int normalCount = 0;
-		for (final String needle : needles) {
-			for (int i = 0; i + needle.length() <= haystack.length(); i++) {
-				if (haystack.substring(i, i + needle.length()).equals(needle)) {
+		for (int i = 0; i < haystack.length(); i++) {
+			for (final String needle : needles) {
+				if (i + needle.length() <= haystack.length() && haystack.substring(i, i + needle.length()).equals(needle)) {
 					normalCount++;
+					i += needle.length() - 1;
+					break;
 				}
 			}
 		}
 		if (!printTimesOnly) {
 			System.out.println("Normal count completed in : " + (System.nanoTime() - countStartTime) + "ns");
 		}
-		Assert.assertTrue("AC found " + listener.count + " normal match found " + normalCount, normalCount == listener.count);
+		Assert.assertTrue("Trie found " + listener.count + " normal match found " + normalCount, normalCount == listener.count);
 	}
 }
