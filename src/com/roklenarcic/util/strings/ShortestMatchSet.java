@@ -86,7 +86,8 @@ class ShortestMatchSet {
 				currentNode = currentNode.getTransition(c);
 				++idx;
 				if (currentNode.match != null) {
-					// Output any matches on the current node and increase the index
+					// Output any matches on the current node
+					// and jump to root, only leaf nodes have matches so next character won't match anything
 					if (!listener.match(currentNode.match, idx)) {
 						break;
 					}
@@ -100,7 +101,8 @@ class ShortestMatchSet {
 				currentNode = currentNode.getTransition(c);
 				++idx;
 				if (currentNode.match != null) {
-					// Output any matches on the current node and increase the index
+					// Output any matches on the current node
+					// and jump to root, only leaf nodes have matches so next character won't match anything
 					if (!listener.match(currentNode.match, idx)) {
 						break;
 					}
@@ -160,12 +162,6 @@ class ShortestMatchSet {
 		// bitwise AND with the right mask.
 		private int modulusMask = keys.length - 1;
 		private int numEntries = 0;
-
-		@Override
-		public TrieNode cloneWith(String thisMatch, TrieNode thisDefaultTransiption) {
-			// TODO Auto-generated method stub
-			return null;
-		}
 
 		@Override
 		public TrieNode getTransition(final char key) {
@@ -297,12 +293,6 @@ class ShortestMatchSet {
 		}
 
 		@Override
-		public TrieNode cloneWith(String thisMatch, TrieNode thisDefaultTransiption) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
 		public TrieNode getTransition(char c) {
 			// First check if the key is between max and min value.
 			// Here we use the fact that char type is unsigned to figure it out
@@ -336,8 +326,6 @@ class ShortestMatchSet {
 	private static abstract class TrieNode {
 
 		protected String match;
-
-		public abstract TrieNode cloneWith(String thisMatch, TrieNode thisDefaultTransiption);
 
 		// Get transition or root node
 		public abstract TrieNode getTransition(char c);
