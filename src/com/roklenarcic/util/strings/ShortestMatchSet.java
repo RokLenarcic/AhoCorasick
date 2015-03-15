@@ -83,9 +83,9 @@ class ShortestMatchSet {
 			while (idx < len) {
 				final char c = haystack.charAt(idx);
 				// Try to transition from the current node using the character
-				currentNode = currentNode.getNextNode(c);
+				currentNode = currentNode.getTransition(c);
 				++idx;
-				if (currentNode.isEmpty()) {
+				if (currentNode.match != null) {
 					// Output any matches on the current node and increase the index
 					if (!listener.match(currentNode.match, idx)) {
 						break;
@@ -97,9 +97,9 @@ class ShortestMatchSet {
 			while (idx < len) {
 				final char c = Character.toLowerCase(haystack.charAt(idx));
 				// Try to transition from the current node using the character
-				currentNode = currentNode.getNextNode(c);
+				currentNode = currentNode.getTransition(c);
 				++idx;
-				if (currentNode.isEmpty()) {
+				if (currentNode.match != null) {
 					// Output any matches on the current node and increase the index
 					if (!listener.match(currentNode.match, idx)) {
 						break;
@@ -129,12 +129,17 @@ class ShortestMatchSet {
 						minKey = node.keys[i];
 					}
 				}
-			}			
-			// If difference between min and max key are small
-			// or only slightly larger than number of entries, use a range node
-			int keyIntervalSize = maxKey - minKey + 1;
-			if (keyIntervalSize <= 8 || (size > (keyIntervalSize) * 0.70)) {
-				return new RangeNode(node, minKey, maxKey);
+			}
+			// Make root node a 65536 entry RangeNode
+			if (node == root) {
+				return new RangeNode(node, '\u0000', '\uffff', true);
+			} else {
+				// If difference between min and max key are small
+				// or only slightly larger than number of entries, use a range node
+				int keyIntervalSize = maxKey - minKey + 1;
+				if (keyIntervalSize <= 8 || (size > (keyIntervalSize) * 0.70)) {
+					return new RangeNode(node, minKey, maxKey, false);
+				}
 			}
 		}
 		return n;
@@ -171,12 +176,12 @@ class ShortestMatchSet {
 				if (keys[currentSlot] == key) {
 					return children[currentSlot];
 				} else if (children[currentSlot] == null) {
-					return root;
+					return root.getTransition(key);
 				} else {
 					currentSlot = ++currentSlot & modulusMask;
 				}
 			} while (currentSlot != defaultSlot);
-			return root;
+			return root.getTransition(key);
 		}
 
 		@Override
@@ -257,23 +262,6 @@ class ShortestMatchSet {
 			return (((0x811c9dc5 ^ (c >> 8)) * HASH_PRIME) ^ (c & 0xff)) * HASH_PRIME;
 		}
 
-		@Override
-		public TrieNode getNextNode(char key) {
-			int defaultSlot = hash(key) & modulusMask;
-			int currentSlot = defaultSlot;
-			// Linear probing to find the entry for key.
-			do {
-				if (keys[currentSlot] == key) {
-					return children[currentSlot];
-				} else if (children[currentSlot] == null) {
-					return root.getTransition(key);
-				} else {
-					currentSlot = ++currentSlot & modulusMask;
-				}
-			} while (currentSlot != defaultSlot);
-			return root.getTransition(key);
-		}
-
 	}
 
 	// This node is good at representing dense ranges of keys.
@@ -285,7 +273,7 @@ class ShortestMatchSet {
 		private TrieNode[] children;
 		private int size = 0;
 
-		private RangeNode(HashmapNode oldNode, char from, char to) {
+		private RangeNode(HashmapNode oldNode, char from, char to, boolean root) {
 			// Value of the first character
 			this.baseChar = from;
 			this.size = to - from + 1;
@@ -296,7 +284,7 @@ class ShortestMatchSet {
 			} else {
 				this.children = new TrieNode[size];
 				// If original node is root node, prefill everything with yourself.
-				if (oldNode == root) {
+				if (root) {
 					Arrays.fill(children, this);
 				}
 				// Grab the children of the old node.
@@ -323,7 +311,7 @@ class ShortestMatchSet {
 			if (idx < size) {
 				return children[idx];
 			}
-			return root;
+			return root.getTransition(c);
 		}
 
 		@Override
@@ -342,18 +330,6 @@ class ShortestMatchSet {
 			}
 		}
 
-		@Override
-		public TrieNode getNextNode(char c) {
-			// First check if the key is between max and min value.
-			// Here we use the fact that char type is unsigned to figure it out
-			// with a single condition.
-			int idx = (char) (c - baseChar);
-			if (idx < size) {
-				return children[idx];
-			}
-			return root.getTransition(c);
-		}
-
 	}
 
 	// Basic node for both
@@ -365,9 +341,6 @@ class ShortestMatchSet {
 
 		// Get transition or root node
 		public abstract TrieNode getTransition(char c);
-		
-		// Get next node from character, either as transition from this node or as transition from root node
-		public abstract TrieNode getNextNode(char c);
 
 		public abstract boolean isEmpty();
 
