@@ -365,7 +365,9 @@ class AhoCorasickSet {
 			this.size = to - from + 1;
 			this.match = oldNode.match;
 			// Avoid even allocating a children array if size is 0.
-			if (size > 0) {
+			if (size <= 0) {
+				size = 0;
+			} else {
 				this.children = new TrieNode[size];
 				// If original node is root node, prefill everything with yourself.
 				if (oldNode.defaultTransition != null) {

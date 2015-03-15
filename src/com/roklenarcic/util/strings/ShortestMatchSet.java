@@ -15,7 +15,7 @@ class ShortestMatchSet {
 
 	public ShortestMatchSet(final Iterable<String> keywords, boolean caseSensitive) {
 		// Create the root node
-		root = new HashmapNode(true);
+		root = new HashmapNode();
 		// Add all keywords
 		KEYWORD_LOOP: for (final String keyword : keywords) {
 			// Skip any empty keywords
@@ -83,30 +83,28 @@ class ShortestMatchSet {
 			while (idx < len) {
 				final char c = haystack.charAt(idx);
 				// Try to transition from the current node using the character
-				currentNode = currentNode.getTransition(c);
-
-				// If cannot transition, take transition from root
-				if (currentNode == null) {
-					currentNode = root.getTransition(c);
-				}
-				// Output any matches on the current node and increase the index
-				if (!currentNode.output(listener, ++idx)) {
-					break;
+				currentNode = currentNode.getNextNode(c);
+				++idx;
+				if (currentNode.isEmpty()) {
+					// Output any matches on the current node and increase the index
+					if (!listener.match(currentNode.match, idx)) {
+						break;
+					}
+					currentNode = root;
 				}
 			}
 		} else {
 			while (idx < len) {
 				final char c = Character.toLowerCase(haystack.charAt(idx));
 				// Try to transition from the current node using the character
-				currentNode = currentNode.getTransition(c);
-
-				// If cannot transition, take transition from root
-				if (currentNode == null) {
-					currentNode = root.getTransition(c);
-				}
-				// Output any matches on the current node and increase the index
-				if (!currentNode.output(listener, ++idx)) {
-					break;
+				currentNode = currentNode.getNextNode(c);
+				++idx;
+				if (currentNode.isEmpty()) {
+					// Output any matches on the current node and increase the index
+					if (!listener.match(currentNode.match, idx)) {
+						break;
+					}
+					currentNode = root;
 				}
 			}
 		}
@@ -131,7 +129,7 @@ class ShortestMatchSet {
 						minKey = node.keys[i];
 					}
 				}
-			}
+			}			
 			// If difference between min and max key are small
 			// or only slightly larger than number of entries, use a range node
 			int keyIntervalSize = maxKey - minKey + 1;
@@ -148,7 +146,7 @@ class ShortestMatchSet {
 
 	// An open addressing hashmap implementation with linear probing
 	// and capacity of 2^n
-	private final static class HashmapNode extends TrieNode {
+	private final class HashmapNode extends TrieNode {
 
 		// Start with capacity of 1 and resize as needed.
 		private TrieNode[] children = new TrieNode[1];
@@ -157,10 +155,6 @@ class ShortestMatchSet {
 		// bitwise AND with the right mask.
 		private int modulusMask = keys.length - 1;
 		private int numEntries = 0;
-
-		protected HashmapNode(boolean root) {
-			super(root);
-		}
 
 		@Override
 		public TrieNode cloneWith(String thisMatch, TrieNode thisDefaultTransiption) {
@@ -177,12 +171,12 @@ class ShortestMatchSet {
 				if (keys[currentSlot] == key) {
 					return children[currentSlot];
 				} else if (children[currentSlot] == null) {
-					return defaultTransition;
+					return root;
 				} else {
 					currentSlot = ++currentSlot & modulusMask;
 				}
 			} while (currentSlot != defaultSlot);
-			return defaultTransition;
+			return root;
 		}
 
 		@Override
@@ -244,7 +238,7 @@ class ShortestMatchSet {
 			do {
 				if (children[currentSlot] == null) {
 					keys[currentSlot] = key;
-					HashmapNode newChild = new HashmapNode(false);
+					HashmapNode newChild = new HashmapNode();
 					children[currentSlot] = newChild;
 					return newChild;
 				} else if (keys[currentSlot] == key) {
@@ -263,28 +257,46 @@ class ShortestMatchSet {
 			return (((0x811c9dc5 ^ (c >> 8)) * HASH_PRIME) ^ (c & 0xff)) * HASH_PRIME;
 		}
 
+		@Override
+		public TrieNode getNextNode(char key) {
+			int defaultSlot = hash(key) & modulusMask;
+			int currentSlot = defaultSlot;
+			// Linear probing to find the entry for key.
+			do {
+				if (keys[currentSlot] == key) {
+					return children[currentSlot];
+				} else if (children[currentSlot] == null) {
+					return root.getTransition(key);
+				} else {
+					currentSlot = ++currentSlot & modulusMask;
+				}
+			} while (currentSlot != defaultSlot);
+			return root.getTransition(key);
+		}
+
 	}
 
 	// This node is good at representing dense ranges of keys.
 	// It has a single array of nodes and a base key value.
 	// Child at array index 3 has key of baseChar + 3.
-	private static final class RangeNode extends TrieNode {
+	private final class RangeNode extends TrieNode {
 
 		private char baseChar = 0;
 		private TrieNode[] children;
 		private int size = 0;
 
 		private RangeNode(HashmapNode oldNode, char from, char to) {
-			super(oldNode.defaultTransition != null);
 			// Value of the first character
 			this.baseChar = from;
 			this.size = to - from + 1;
 			this.match = oldNode.match;
 			// Avoid even allocating a children array if size is 0.
-			if (size > 0) {
+			if (size <= 0) {
+				size = 0;
+			} else {
 				this.children = new TrieNode[size];
 				// If original node is root node, prefill everything with yourself.
-				if (oldNode.defaultTransition != null) {
+				if (oldNode == root) {
 					Arrays.fill(children, this);
 				}
 				// Grab the children of the old node.
@@ -311,7 +323,7 @@ class ShortestMatchSet {
 			if (idx < size) {
 				return children[idx];
 			}
-			return defaultTransition;
+			return root;
 		}
 
 		@Override
@@ -330,36 +342,37 @@ class ShortestMatchSet {
 			}
 		}
 
+		@Override
+		public TrieNode getNextNode(char c) {
+			// First check if the key is between max and min value.
+			// Here we use the fact that char type is unsigned to figure it out
+			// with a single condition.
+			int idx = (char) (c - baseChar);
+			if (idx < size) {
+				return children[idx];
+			}
+			return root.getTransition(c);
+		}
+
 	}
 
 	// Basic node for both
 	private static abstract class TrieNode {
 
-		protected TrieNode defaultTransition = null;
 		protected String match;
-
-		protected TrieNode(boolean root) {
-			this.defaultTransition = root ? this : null;
-		}
 
 		public abstract TrieNode cloneWith(String thisMatch, TrieNode thisDefaultTransiption);
 
-		// Get transition (root node returns something non-null for all characters - itself)
+		// Get transition or root node
 		public abstract TrieNode getTransition(char c);
+		
+		// Get next node from character, either as transition from this node or as transition from root node
+		public abstract TrieNode getNextNode(char c);
 
 		public abstract boolean isEmpty();
 
 		public abstract void mapEntries(final EntryVisitor visitor);
 
-		// Report matches at this node. Use at matching.
-		public final boolean output(MatchListener listener, int idx) {
-			// since idx is the last character in the match
-			// position it past the match (to be consistent with conventions)
-			if (match != null) {
-				return listener.match(match, idx);
-			}
-			return true;
-		}
 	}
 
 }
