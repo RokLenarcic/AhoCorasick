@@ -134,16 +134,14 @@ class LongestMatchSet {
 						// length of this match.
 						TrieNode ancestor = parent;
 						int totalOffset = 1;
-						while (ancestor != null) {
-							if (ancestor.match != null) {
-								if (totalOffset + ancestor.matchOffset >= value.match.length() + value.matchOffset) {
-									value.priorMatch = ancestor;
-									value.priorMatchOffset = totalOffset + ancestor.matchOffset;
-									break;
-								} else {
-									totalOffset += ancestor.priorMatchOffset;
-									ancestor = ancestor.priorMatch;
-								}
+						while (ancestor != null && ancestor.match != null) {
+							if (totalOffset + ancestor.matchOffset >= value.match.length() + value.matchOffset) {
+								value.priorMatch = ancestor;
+								value.priorMatchOffset = totalOffset + ancestor.matchOffset;
+								break;
+							} else {
+								totalOffset += ancestor.priorMatchOffset;
+								ancestor = ancestor.priorMatch;
 							}
 						}
 					}

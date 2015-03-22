@@ -97,7 +97,8 @@ public class LongestMatchSetTest {
 
 	@Test
 	public void testLongestOverlap() {
-		test("Values ", "Val", "a");
+		test("Values ", "V", "Vu", "Val", "a", "al", "aly", "l", "lut", "lue", "lues", "luetic", "u", "ut", "e", "es", "ex", "estus", "s", "sx", "xxa", "xxes",
+				"xxal", "xxxl", "yyal", "xxes", "xxs", "yys", "yyes");
 	}
 
 	@Test
