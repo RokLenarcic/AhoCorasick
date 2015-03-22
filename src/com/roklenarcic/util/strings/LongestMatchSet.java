@@ -9,7 +9,7 @@ class LongestMatchSet {
 
 	public LongestMatchSet(final Iterable<String> keywords, boolean caseSensitive) {
 		// Create the root node
-		root = new HashmapNode();
+		root = new HashmapNode(true);
 		// Add all keywords
 		for (final String keyword : keywords) {
 			// Skip any empty keywords
@@ -30,6 +30,135 @@ class LongestMatchSet {
 		// whose size is close to the size of range of keys with
 		// flat array based nodes.
 		root = optimizeNodes(root);
+		// Now go through nodes, breadth first store them in output links.
+		// It's like failure transitons but any node with natural output will reset
+		// the "failure transition" extending to root node.
+		// For example "abcd", "a", "b", should result
+		// in "ab" node to have output link to "b" in output link.
+		//
+		// Setup a queue to enable breath-first processing.
+		final Queue<TrieNode> queue = new Queue<TrieNode>();
+		EntryVisitor failOutputsVisitor = new EntryVisitor() {
+
+			public void visit(TrieNode parent, char key, TrieNode value) {
+				// Get fail transiton of the parent.
+				TrieNode parentFail = parent.match != null ? root : parent.priorMatch;
+				// Since root node has null fail transition, first level nodes have null parentFail.
+				if (parentFail == null) {
+					// First level nodes have one possible fail transition, which is
+					// root because the only possible suffix to a one character
+					// string is an empty string
+					value.priorMatch = parent;
+				} else {
+					// Dig up the tree until you find a fail transition.
+					do {
+						// suffix of parent + key = suffix of this node
+						// parent -> char -> value
+						// parentFail -> char -> valueFail
+						// e.g. "ab" -> c -> "abc"
+						// "b" -> c -> "bc"
+						final TrieNode matchContinuation = parentFail.getTransition(key);
+						if (matchContinuation != null) {
+							value.priorMatch = matchContinuation;
+						} else {
+							// If parentFail didn't have key mapping
+							// take parentFail's failTransition and try again
+							// The last fail transition is the root node, which
+							// always has a key mapping.
+							parentFail = parentFail.priorMatch;
+						}
+					} while (value.priorMatch == null);
+				}
+				// Queue the non-leaf node.
+				if (!value.isEmpty()) {
+					queue.push(value);
+				}
+			}
+
+		};
+		root.mapEntries(failOutputsVisitor);
+		while (!queue.isEmpty()) {
+			queue.pop().mapEntries(failOutputsVisitor);
+		}
+
+		// Next we burn some time constructing a list of non-overlapping matches on all
+		// nodes, which is faster than eliminating overlapping matches while matching.
+
+		// Let's say we're operating on a set of the following list of words:
+		// abcdefg, abc, cd, ef, deg, f
+		// What are the output links on the abcdefg path?
+		// a = null, 0
+		// b = null, 0
+		// c = "abc", 0
+		// d = "abc", 1
+		// e = "abc", 2
+		// f = "ef", 0, link to c
+		// g = "abcdefg", 0
+		//
+		// The solution took some time to figure out and it's a doozy.
+		// The prior match links are linking to suffix node of matching from root since the
+		// Last natural match in this branch of the tree.
+		// Now we go breath first and promote these suffix matches to match links.
+		EntryVisitor promotingVisitor = new EntryVisitor() {
+
+			public void visit(TrieNode parent, char key, TrieNode value) {
+				if (value.match != null) {
+					// Delete any submatch
+					value.priorMatch = null;
+				} else {
+					// First let's find out what do we have in priorMatch link.
+					String priorMatchString = null;
+					int priorMatchOffset = 0;
+					TrieNode priorMatch = value.priorMatch;
+					while (priorMatch != null && priorMatchString == null) {
+						if (priorMatch.match != null) {
+							priorMatchString = priorMatch.match;
+							priorMatchOffset = priorMatch.matchOffset;
+						} else {
+							priorMatch = priorMatch.priorMatch;
+						}
+					}
+					// So what now?
+					if (priorMatch == null) {
+						// Just link to parent match and add
+						value.priorMatch = parent.priorMatch;
+						value.priorMatchOffset = parent.priorMatchOffset + 1;
+						value.match = parent.match;
+						value.matchOffset = parent.matchOffset + 1;
+					} else {
+						value.match = priorMatchString;
+						value.matchOffset = priorMatchOffset;
+						value.priorMatch = null;
+						value.priorMatchOffset = 0;
+						// Link to the first match up the tree that has offset beyond the
+						// length of this match.
+						TrieNode ancestor = parent;
+						int totalOffset = 1;
+						while (ancestor != null) {
+							if (ancestor.match != null) {
+								if (totalOffset + ancestor.matchOffset >= value.match.length() + value.matchOffset) {
+									value.priorMatch = ancestor;
+									value.priorMatchOffset = totalOffset + ancestor.matchOffset;
+									break;
+								} else {
+									totalOffset += ancestor.priorMatchOffset;
+									ancestor = ancestor.priorMatch;
+								}
+							}
+						}
+					}
+				}
+
+				// Queue the non-leaf node.
+				if (!value.isEmpty()) {
+					queue.push(value);
+				}
+			}
+		};
+		root.mapEntries(promotingVisitor);
+		while (!queue.isEmpty()) {
+			queue.pop().mapEntries(promotingVisitor);
+		}
 
 		// Fill out ranged nodes depth first otherwise the filled out extra nodes
 		// get queued and you get an endless queue.
@@ -57,6 +186,7 @@ class LongestMatchSet {
 
 		};
 		root.mapEntries(fillOutRangeNodesVisitor);
+
 	}
 
 	public void match(final String haystack, final MatchListener listener) {
@@ -73,32 +203,32 @@ class LongestMatchSet {
 			while (idx < len) {
 				final char c = haystack.charAt(idx);
 				// Try to transition from the current node using the character
-				currentNode = currentNode.getTransition(c);
-				++idx;
-				if (currentNode.match != null) {
-					// Output any matches on the current node
-					// and jump to root, only leaf nodes have matches so next character won't match anything
-					if (!listener.match(currentNode.match, idx)) {
-						break;
+				TrieNode nextNode = currentNode.getTransition(c);
+				if (nextNode == null) {
+					if (!currentNode.output(listener, idx)) {
+						return;
 					}
-					currentNode = root;
+					nextNode = root.getTransition(c);
 				}
+				++idx;
+				currentNode = nextNode;
 			}
+			currentNode.output(listener, idx);
 		} else {
 			while (idx < len) {
 				final char c = Character.toLowerCase(haystack.charAt(idx));
 				// Try to transition from the current node using the character
-				currentNode = currentNode.getTransition(c);
-				++idx;
-				if (currentNode.match != null) {
-					// Output any matches on the current node
-					// and jump to root, only leaf nodes have matches so next character won't match anything
-					if (!listener.match(currentNode.match, idx)) {
-						break;
+				TrieNode nextNode = currentNode.getTransition(c);
+				if (nextNode == null) {
+					if (!currentNode.output(listener, idx)) {
+						return;
 					}
-					currentNode = root;
+					nextNode = root.getTransition(c);
 				}
+				++idx;
+				currentNode = nextNode;
 			}
+			currentNode.output(listener, idx);
 		}
 	}
 
@@ -122,16 +252,11 @@ class LongestMatchSet {
 					}
 				}
 			}
-			// Make root node a 65536 entry RangeNode
-			if (node == root) {
-				return new RangeNode(node, '\u0000', '\uffff', true);
-			} else {
-				// If difference between min and max key are small
-				// or only slightly larger than number of entries, use a range node
-				int keyIntervalSize = maxKey - minKey + 1;
-				if (keyIntervalSize <= 8 || (size > (keyIntervalSize) * 0.70)) {
-					return new RangeNode(node, minKey, maxKey, false);
-				}
+			// If difference between min and max key are small
+			// or only slightly larger than number of entries, use a range node
+			int keyIntervalSize = maxKey - minKey + 1;
+			if (keyIntervalSize <= 8 || (size > (keyIntervalSize) * 0.70)) {
+				return new RangeNode(node, minKey, maxKey);
 			}
 		}
 		return n;
@@ -143,7 +268,7 @@ class LongestMatchSet {
 
 	// An open addressing hashmap implementation with linear probing
 	// and capacity of 2^n
-	private final class HashmapNode extends TrieNode {
+	private final static class HashmapNode extends TrieNode {
 
 		// Start with capacity of 1 and resize as needed.
 		private TrieNode[] children = new TrieNode[1];
@@ -152,6 +277,10 @@ class LongestMatchSet {
 		// bitwise AND with the right mask.
 		private int modulusMask = keys.length - 1;
 		private int numEntries = 0;
+
+		protected HashmapNode(boolean root) {
+			super(root);
+		}
 
 		@Override
 		public TrieNode getTransition(final char key) {
@@ -162,12 +291,12 @@ class LongestMatchSet {
 				if (keys[currentSlot] == key) {
 					return children[currentSlot];
 				} else if (children[currentSlot] == null) {
-					return root.getTransition(key);
+					return defaultTransition;
 				} else {
 					currentSlot = ++currentSlot & modulusMask;
 				}
 			} while (currentSlot != defaultSlot);
-			return root.getTransition(key);
+			return defaultTransition;
 		}
 
 		@Override
@@ -229,7 +358,7 @@ class LongestMatchSet {
 			do {
 				if (children[currentSlot] == null) {
 					keys[currentSlot] = key;
-					HashmapNode newChild = new HashmapNode();
+					HashmapNode newChild = new HashmapNode(false);
 					children[currentSlot] = newChild;
 					return newChild;
 				} else if (keys[currentSlot] == key) {
@@ -253,13 +382,14 @@ class LongestMatchSet {
 	// This node is good at representing dense ranges of keys.
 	// It has a single array of nodes and a base key value.
 	// Child at array index 3 has key of baseChar + 3.
-	private final class RangeNode extends TrieNode {
+	private static final class RangeNode extends TrieNode {
 
 		private char baseChar = 0;
 		private TrieNode[] children;
 		private int size = 0;
 
-		private RangeNode(HashmapNode oldNode, char from, char to, boolean root) {
+		private RangeNode(HashmapNode oldNode, char from, char to) {
+			super(oldNode.defaultTransition != null);
 			// Value of the first character
 			this.baseChar = from;
 			this.size = to - from + 1;
@@ -270,7 +400,7 @@ class LongestMatchSet {
 			} else {
 				this.children = new TrieNode[size];
 				// If original node is root node, prefill everything with yourself.
-				if (root) {
+				if (oldNode.defaultTransition != null) {
 					Arrays.fill(children, this);
 				}
 				// Grab the children of the old node.
@@ -291,7 +421,7 @@ class LongestMatchSet {
 			if (idx < size) {
 				return children[idx];
 			}
-			return root.getTransition(c);
+			return defaultTransition;
 		}
 
 		@Override
@@ -315,7 +445,15 @@ class LongestMatchSet {
 	// Basic node for both
 	private static abstract class TrieNode {
 
+		protected TrieNode defaultTransition;
 		protected String match;
+		protected int matchOffset = 0;
+		protected TrieNode priorMatch;
+		protected int priorMatchOffset = 0;
+
+		protected TrieNode(boolean root) {
+			this.defaultTransition = root ? this : null;
+		}
 
 		// Get transition or root node
 		public abstract TrieNode getTransition(char c);
@@ -323,6 +461,24 @@ class LongestMatchSet {
 		public abstract boolean isEmpty();
 
 		public abstract void mapEntries(final EntryVisitor visitor);
+
+		// Report matches at this node. Use at matching.
+		public final boolean output(MatchListener listener, int idx) {
+			// since idx is the last character in the match
+			// position it past the match (to be consistent with conventions)
+			boolean ret = true;
+			if (match != null) {
+				idx -= matchOffset;
+				ret = listener.match(match, idx);
+				TrieNode priorMatch = this.priorMatch;
+				while (priorMatch != null && ret) {
+					idx -= priorMatchOffset;
+					ret = listener.match(priorMatch.match, idx);
+					priorMatch = priorMatch.priorMatch;
+				}
+			}
+			return ret;
+		}
 
 	}
 

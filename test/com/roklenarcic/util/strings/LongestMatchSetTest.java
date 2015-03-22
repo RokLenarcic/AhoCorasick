@@ -96,6 +96,11 @@ public class LongestMatchSetTest {
 	}
 
 	@Test
+	public void testLongestOverlap() {
+		test("Values ", "Val", "a");
+	}
+
+	@Test
 	public void testLongKeywords() {
 		final String[] keywords = new String[100];
 		keywords[0] = "a";
