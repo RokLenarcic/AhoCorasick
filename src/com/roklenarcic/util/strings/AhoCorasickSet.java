@@ -40,7 +40,7 @@ class AhoCorasickSet {
 		// for all 2 letter words.
 		//
 		// Setup a queue to enable breath-first processing.
-		final TrieNodeQueue queue = new TrieNodeQueue();
+		final Queue<TrieNode> queue = new Queue<TrieNode>();
 		EntryVisitor failTransAndOutputsVisitor = new EntryVisitor() {
 
 			public void visit(TrieNode parent, char key, TrieNode value) {
@@ -365,7 +365,9 @@ class AhoCorasickSet {
 			this.size = to - from + 1;
 			this.match = oldNode.match;
 			// Avoid even allocating a children array if size is 0.
-			if (size > 0) {
+			if (size <= 0) {
+				size = 0;
+			} else {
 				this.children = new TrieNode[size];
 				// If original node is root node, prefill everything with yourself.
 				if (oldNode.defaultTransition != null) {
@@ -451,47 +453,4 @@ class AhoCorasickSet {
 		}
 	}
 
-	// Single-linked list
-	private static class TrieNodeQueue {
-
-		private TrieNode[] arr = new TrieNode[50];
-		private int first = 0;
-		private int last = 0;
-
-		boolean isEmpty() {
-			return first == last;
-		}
-
-		TrieNode pop() {
-			if (!isEmpty()) {
-				TrieNode ret = arr[first];
-				first = ++first % arr.length;
-				return ret;
-			} else {
-				return null;
-			}
-		}
-
-		void push(TrieNode n) {
-			if (((last + 1) % arr.length) == first) {
-				int newCapacity = arr.length + (arr.length >> 1);
-				if (newCapacity < 0) {
-					newCapacity = Integer.MAX_VALUE - 8;
-				}
-				TrieNode[] newArr = new TrieNode[newCapacity];
-				if (first <= last) {
-					System.arraycopy(arr, first, newArr, first, last - first);
-				} else {
-					System.arraycopy(arr, first, newArr, 0, arr.length - first);
-					System.arraycopy(arr, 0, newArr, arr.length - first, last);
-					last += arr.length - first;
-					first = 0;
-				}
-				arr = newArr;
-			}
-			arr[last] = n;
-			last = ++last % arr.length;
-		}
-
-	}
 }

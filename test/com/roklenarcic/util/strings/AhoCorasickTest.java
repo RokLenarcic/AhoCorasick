@@ -144,7 +144,6 @@ public class AhoCorasickTest {
 				count++;
 				Assert.assertTrue("Could not find needle " + word + " at end position " + endPosition + " in \n" + haystack,
 						keywords.contains(haystack.substring(endPosition - word.length(), endPosition)));
-				// System.out.println(word);
 				return true;
 			}
 		}
