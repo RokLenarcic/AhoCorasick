@@ -258,10 +258,10 @@ class AhoCorasickSet {
 			int currentSlot = defaultSlot;
 			// Linear probing to find the entry for key.
 			do {
-				if (keys[currentSlot] == key) {
-					return children[currentSlot];
-				} else if (children[currentSlot] == null) {
+				if (children[currentSlot] == null) {
 					return defaultTransition;
+				} else if (keys[currentSlot] == key) {
+					return children[currentSlot];
 				} else {
 					currentSlot = ++currentSlot & modulusMask;
 				}
