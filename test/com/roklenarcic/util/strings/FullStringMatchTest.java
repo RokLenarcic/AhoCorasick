@@ -1,10 +1,6 @@
 package com.roklenarcic.util.strings;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -20,12 +16,8 @@ public class FullStringCorasickTest {
 
 	public static void main(final String[] args) throws IOException {
 		System.in.read();
-		new FullStringCorasickTest(true, 1000000).testLiteral();
-		new FullStringCorasickTest(true, 1000000).testOverlap();
-		new FullStringCorasickTest(true, 1000000).testLongKeywords();
+		new FullStringCorasickTest(true, 1000000).testLongNumbers();
 		new FullStringCorasickTest(true, 1000000).testFullRandom();
-		new FullStringCorasickTest(true, 1000000).testFailureTransitions();
-		new FullStringCorasickTest(true, 1000000).testDictionary();
 	}
 
 	@Rule
@@ -44,42 +36,6 @@ public class FullStringCorasickTest {
 	}
 
 	@Test
-	public void testDictionary() throws IOException {
-		File dictFile = new File("/usr/share/dict/words");
-		if (dictFile.exists()) {
-			BufferedReader str = new BufferedReader(new FileReader(dictFile));
-			try {
-				List<String> words = new ArrayList<String>();
-				String word = null;
-				while ((word = str.readLine()) != null) {
-					words.add(word);
-				}
-				test("Values specified as nondelimited strings are interpreted according "
-						+ "their length. For a string 8 or 14 characters long, the year is assumed" + " to be given by the first 4 characters. Otherwise, the "
-						+ "year is assumed to be given by the first 2 characters. " + "The string is interpreted from left to right to find year,"
-						+ " month, day, hour, minute, and second values, for as many parts" + " as are present in the string. This means you should not use "
-						+ "strings that have fewer than 6 characters.", words.toArray(new String[words.size()]));
-			} finally {
-				str.close();
-			}
-		}
-	}
-
-	@Test
-	public void testFailureTransitions() {
-		test("abbccddeef", "bc", "cc", "bcc", "ccddee", "ccddeee", "d");
-	}
-
-	@Test
-	public void testFullNode() {
-		final String[] keywords = new String[65536];
-		for (int i = 0; i < keywords.length; i++) {
-			keywords[i] = String.valueOf((char) i);
-		}
-		test("\u0000\uffff\ufffe", keywords);
-	}
-
-	@Test
 	public void testFullRandom() {
 		final String[] smallDict = generateRandomStrings(10000, 2, 3);
 		final String[] mediumDict = generateRandomStrings(100000, 2, 3);
@@ -90,24 +46,16 @@ public class FullStringCorasickTest {
 	}
 
 	@Test
-	public void testLiteral() {
-		test("The quick red fox, jumps over the lazy brown dog.", "The", "quick", "red", "fox", "jumps", "over", "the", "lazy", "brown", "dog");
-	}
-
-	@Test
-	public void testLongKeywords() {
+	public void testLongNumbers() {
 		final String[] keywords = new String[100];
-		keywords[0] = "a";
-		for (int i = 1; i < keywords.length; i++) {
-			keywords[i] = keywords[i - 1] + "a";
+		final Random r = new Random();
+		for (int i = 0; i < keywords.length; i++) {
+			keywords[i] = "";
+			for (int j = 0; j < 12; j++) {
+				keywords[i] = keywords[i] + r.nextInt(10);
+			}
 		}
 		test(keywords[keywords.length - 1], keywords);
-	}
-
-	@Test
-	public void testOverlap() {
-		test("aaaa", "a", "aa", "aaa", "aaaa");
-		test(" aaaaaaa aaababababaabaa ", "a", "aa", "aaa", "aaaa");
 	}
 
 	private String[] generateRandomStrings(final int n, final int minSize, final int maxSize) {

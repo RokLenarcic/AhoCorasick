@@ -4,4 +4,4 @@ rm -rf bin/*
 javac -d bin/ src/com/roklenarcic/util/strings/*
 javac -cp "bin/:$JUNIT" -d bin/ test/com/roklenarcic/util/strings/*
 
-echo -e "\n" | java -cp "bin/:$JUNIT" -Xverify:none com.roklenarcic.util.strings.AhoCorasickTest
+echo -e "\n" | java -cp "bin/:$JUNIT" -Xverify:none "com.roklenarcic.util.strings.$1"
