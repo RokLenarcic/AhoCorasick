@@ -12,12 +12,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
 
-public class FullStringCorasickTest {
+public class FullStringMatchTest {
 
 	public static void main(final String[] args) throws IOException {
 		System.in.read();
-		new FullStringCorasickTest(true, 1000000).testLongNumbers();
-		new FullStringCorasickTest(true, 1000000).testFullRandom();
+		new FullStringMatchTest(true, 1000000).testLongNumbers();
+		new FullStringMatchTest(true, 1000000).testFullRandom();
 	}
 
 	@Rule
@@ -26,11 +26,11 @@ public class FullStringCorasickTest {
 	private final boolean printTimesOnly;
 	private int testLoopSize = 10000;
 
-	public FullStringCorasickTest() {
+	public FullStringMatchTest() {
 		this(false, 10000);
 	}
 
-	private FullStringCorasickTest(final boolean printTimesOnly, int testLoopSize) {
+	private FullStringMatchTest(final boolean printTimesOnly, int testLoopSize) {
 		this.printTimesOnly = printTimesOnly;
 		this.testLoopSize = testLoopSize;
 	}
