@@ -5,19 +5,12 @@ package com.roklenarcic.util.strings;
 // It is highly optimized for this particular use.
 class FullStringMatchSet {
 
-	// FNV-1a hash
-	private static int hash(char c) {
-		// HASH_BASIS = 0x811c9dc5;
-		final int HASH_PRIME = 16777619;
-		return (((0x811c9dc5 ^ (c >> 8)) * HASH_PRIME) ^ (c & 0xff)) * HASH_PRIME;
-	}
-
 	private boolean caseSensitive = true;
 	private TrieNode root;
 
 	public FullStringMatchSet(final Iterable<String> keywords, boolean caseSensitive) {
 		// Create the root node
-		root = new TrieNode();
+		root = new HashmapNode();
 		// Add all keywords
 		for (final String keyword : keywords) {
 			// Skip any empty keywords
@@ -25,7 +18,7 @@ class FullStringMatchSet {
 				// Start with the current node and traverse the tree
 				// character by character. Add nodes as needed to
 				// fill out the tree.
-				TrieNode currentNode = root;
+				HashmapNode currentNode = (HashmapNode) root;
 				for (int idx = 0; idx < keyword.length(); idx++) {
 					currentNode = currentNode.getOrAddChild(caseSensitive ? keyword.charAt(idx) : Character.toLowerCase(keyword.charAt(idx)));
 				}
@@ -34,7 +27,7 @@ class FullStringMatchSet {
 		// Go through nodes depth first, swap any hashmap nodes,
 		// whose size is close to the size of range of keys with
 		// flat array based nodes.
-		root.optimizeNodes();
+		root = optimizeNodes(root);
 	}
 
 	public void match(final String haystack, final MatchListener listener) {
@@ -49,70 +42,18 @@ class FullStringMatchSet {
 		// have to deal with duplicated code.
 		if (caseSensitive) {
 			while (idx < len) {
-				final char c = haystack.charAt(idx++);
 				// Try to transition from the current node using the character
-				if (currentNode.keys == null) {
-					// First check if the key is between max and min value.
-					// Here we use the fact that char type is unsigned to figure it out
-					// with a single condition.
-					int slot = (char) (c - currentNode.baseCharOrModulusMask);
-					if (slot < currentNode.size) {
-						currentNode = currentNode.children[slot];
-						if (currentNode == null) {
-							return;
-						}
-					} else {
-						return;
-					}
-				} else {
-					int defaultSlot = hash(c) & currentNode.baseCharOrModulusMask;
-					int currentSlot = defaultSlot;
-					// Linear probing to find the entry for key.
-					do {
-						if (currentNode.children[currentSlot] == null) {
-							return;
-						} else if (currentNode.keys[currentSlot] == c) {
-							currentNode = currentNode.children[currentSlot];
-							continue;
-						} else {
-							currentSlot = ++currentSlot & currentNode.baseCharOrModulusMask;
-						}
-					} while (currentSlot != defaultSlot);
+				currentNode = currentNode.getTransition(haystack.charAt(idx++));
+				if (currentNode == null) {
 					return;
 				}
 			}
 			listener.match(haystack, len);
 		} else {
 			while (idx < len) {
-				final char c = Character.toLowerCase(haystack.charAt(idx++));
 				// Try to transition from the current node using the character
-				if (currentNode.keys == null) {
-					// First check if the key is between max and min value.
-					// Here we use the fact that char type is unsigned to figure it out
-					// with a single condition.
-					int slot = (char) (c - currentNode.baseCharOrModulusMask);
-					if (slot < currentNode.size) {
-						currentNode = currentNode.children[slot];
-						if (currentNode == null) {
-							return;
-						}
-					} else {
-						return;
-					}
-				} else {
-					int defaultSlot = hash(c) & currentNode.baseCharOrModulusMask;
-					int currentSlot = defaultSlot;
-					// Linear probing to find the entry for key.
-					do {
-						if (currentNode.children[currentSlot] == null) {
-							return;
-						} else if (currentNode.keys[currentSlot] == c) {
-							currentNode = currentNode.children[currentSlot];
-							continue;
-						} else {
-							currentSlot = ++currentSlot & currentNode.baseCharOrModulusMask;
-						}
-					} while (currentSlot != defaultSlot);
+				currentNode = currentNode.getTransition(Character.toLowerCase(haystack.charAt(idx++)));
+				if (currentNode == null) {
 					return;
 				}
 			}
@@ -120,55 +61,23 @@ class FullStringMatchSet {
 		}
 	}
 
-	// Basic node for both
-	private final static class TrieNode {
-
-		private int baseCharOrModulusMask = 0;
-		private TrieNode[] children = new TrieNode[1];
-		private char[] keys = new char[1];
-		private int size = 0;
-
-		// Return the node for a key or create a new hashmap node for that key
-		// and return that.
-		public TrieNode getOrAddChild(char key) {
-			// Check if we need to resize. Capacity of 2^16 doesn't need to resize.
-			// If capacity is <16 and arrays are full or capacity is >16 and
-			// arrays are 90% full, resize
-			if (keys.length < 0x10000 && ((size >= keys.length) || (size > 16 && (size >= keys.length * 0.90f)))) {
-				enlarge();
-			}
-			++size;
-			int defaultSlot = hash(key) & baseCharOrModulusMask;
-			int currentSlot = defaultSlot;
-			do {
-				if (children[currentSlot] == null) {
-					keys[currentSlot] = key;
-					TrieNode newChild = new TrieNode();
-					children[currentSlot] = newChild;
-					return newChild;
-				} else if (keys[currentSlot] == key) {
-					return children[currentSlot];
-				} else {
-					currentSlot = ++currentSlot & baseCharOrModulusMask;
-				}
-			} while (currentSlot != defaultSlot);
-			throw new IllegalStateException();
-		}
-
-		// A recursive function that replaces hashmap nodes with range nodes
-		// when appropriate.
-		public final void optimizeNodes() {
+	// A recursive function that replaces hashmap nodes with range nodes
+	// when appropriate.
+	private final TrieNode optimizeNodes(TrieNode n) {
+		if (n instanceof HashmapNode) {
+			HashmapNode node = (HashmapNode) n;
 			char minKey = '\uffff';
 			char maxKey = 0;
 			// Find you the min and max key on the node.
-			for (int i = 0; i < children.length; i++) {
-				if (children[i] != null) {
-					children[i].optimizeNodes();
-					if (keys[i] > maxKey) {
-						maxKey = keys[i];
+			int size = node.numEntries;
+			for (int i = 0; i < node.children.length; i++) {
+				if (node.children[i] != null) {
+					node.children[i] = optimizeNodes(node.children[i]);
+					if (node.keys[i] > maxKey) {
+						maxKey = node.keys[i];
 					}
-					if (keys[i] < minKey) {
-						minKey = keys[i];
+					if (node.keys[i] < minKey) {
+						minKey = node.keys[i];
 					}
 				}
 			}
@@ -176,26 +85,39 @@ class FullStringMatchSet {
 			// or only slightly larger than number of entries, use a range node
 			int keyIntervalSize = maxKey - minKey + 1;
 			if (keyIntervalSize <= 8 || (size > (keyIntervalSize) * 0.70)) {
-				// Value of the first character
-				baseCharOrModulusMask = minKey;
-				size = maxKey - minKey + 1;
-				// Avoid even allocating a children array if size is 0.
-				if (size <= 0) {
-					children = null;
-					size = 0;
-					keys = null;
-				} else {
-					TrieNode[] newChildren = new TrieNode[size];
-					// Grab the children of the old node.
-					for (int i = 0; i < children.length; i++) {
-						if (children[i] != null) {
-							newChildren[keys[i] - minKey] = children[i];
-						}
-					}
-					children = newChildren;
-					keys = null;
-				}
+				return new RangeNode(node, minKey, maxKey);
 			}
+		}
+		return n;
+	}
+
+	// An open addressing hashmap implementation with linear probing
+	// and capacity of 2^n
+	private final static class HashmapNode extends TrieNode {
+
+		// Start with capacity of 1 and resize as needed.
+		private TrieNode[] children = new TrieNode[1];
+		private char[] keys = new char[1];
+		// Since capacity is a power of 2, we calculate mod by just
+		// bitwise AND with the right mask.
+		private int modulusMask = keys.length - 1;
+		private int numEntries = 0;
+
+		@Override
+		public TrieNode getTransition(final char key) {
+			int defaultSlot = hash(key) & modulusMask;
+			int currentSlot = defaultSlot;
+			// Linear probing to find the entry for key.
+			do {
+				if (keys[currentSlot] == key) {
+					return children[currentSlot];
+				} else if (children[currentSlot] == null) {
+					return null;
+				} else {
+					currentSlot = ++currentSlot & modulusMask;
+				}
+			} while (currentSlot != defaultSlot);
+			return null;
 		}
 
 		// Double the capacity of the node, calculate the new mask,
@@ -225,8 +147,91 @@ class FullStringMatchSet {
 			}
 			this.keys = biggerKeys;
 			this.children = biggerChildren;
-			this.baseCharOrModulusMask = biggerMask;
+			this.modulusMask = biggerMask;
 		}
+
+		// Return the node for a key or create a new hashmap node for that key
+		// and return that.
+		private HashmapNode getOrAddChild(char key) {
+			// Check if we need to resize. Capacity of 2^16 doesn't need to resize.
+			// If capacity is <16 and arrays are full or capacity is >16 and
+			// arrays are 90% full, resize
+			if (keys.length < 0x10000 && ((numEntries >= keys.length) || (numEntries > 16 && (numEntries >= keys.length * 0.90f)))) {
+				enlarge();
+			}
+			++numEntries;
+			int defaultSlot = hash(key) & modulusMask;
+			int currentSlot = defaultSlot;
+			do {
+				if (children[currentSlot] == null) {
+					keys[currentSlot] = key;
+					HashmapNode newChild = new HashmapNode();
+					children[currentSlot] = newChild;
+					return newChild;
+				} else if (keys[currentSlot] == key) {
+					return (HashmapNode) children[currentSlot];
+				} else {
+					currentSlot = ++currentSlot & modulusMask;
+				}
+			} while (currentSlot != defaultSlot);
+			throw new IllegalStateException();
+		}
+
+		// FNV-1a hash
+		private int hash(char c) {
+			// HASH_BASIS = 0x811c9dc5;
+			final int HASH_PRIME = 16777619;
+			return (((0x811c9dc5 ^ (c >> 8)) * HASH_PRIME) ^ (c & 0xff)) * HASH_PRIME;
+		}
+
+	}
+
+	// This node is good at representing dense ranges of keys.
+	// It has a single array of nodes and a base key value.
+	// Child at array index 3 has key of baseChar + 3.
+	private static final class RangeNode extends TrieNode {
+
+		private char baseChar = 0;
+		private TrieNode[] children;
+		private int size = 0;
+
+		private RangeNode(HashmapNode oldNode, char from, char to) {
+			// Value of the first character
+			this.baseChar = from;
+			this.size = to - from + 1;
+			// Avoid even allocating a children array if size is 0.
+			if (size <= 0) {
+				size = 0;
+			} else {
+				this.children = new TrieNode[size];
+				// If original node is root node, prefill everything with yourself.
+				// Grab the children of the old node.
+				for (int i = 0; i < oldNode.children.length; i++) {
+					if (oldNode.children[i] != null) {
+						children[oldNode.keys[i] - from] = oldNode.children[i];
+					}
+				}
+			}
+		}
+
+		@Override
+		public TrieNode getTransition(char c) {
+			// First check if the key is between max and min value.
+			// Here we use the fact that char type is unsigned to figure it out
+			// with a single condition.
+			int idx = (char) (c - baseChar);
+			if (idx < size) {
+				return children[idx];
+			}
+			return null;
+		}
+
+	}
+
+	// Basic node for both
+	private static abstract class TrieNode {
+
+		public abstract TrieNode getTransition(char c);
 
 	}
 
