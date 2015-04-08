@@ -1,23 +1,18 @@
 #!/bin/bash
 
+set -eu -o pipefail
+cd $(dirname $(dirname $0))
+
 echo -e "Testing branch $1\n"
 
 git checkout $1
 
-rm -rf bin/*
-javac -d bin/ src/com/roklenarcic/util/strings/*
-javac -cp "bin/:$JUNIT" -d bin/ test/com/roklenarcic/util/strings/*
-
-java -cp "bin/:$JUNIT" -Xverify:none "com.roklenarcic.util.strings.$3"
+mvn clean test-compile
+echo -e "\n" | mvn exec:java -Dexec.mainClass="com.roklenarcic.util.strings.$3" -Dexec.classpathScope="test"
 
 echo -e "\nTesing branch $2\n"
 
 git checkout $2
 
-rm -rf bin/*
-javac -d bin/ src/com/roklenarcic/util/strings/*
-javac -cp "bin/:$JUNIT" -d bin/ test/com/roklenarcic/util/strings/*
-
-java -cp "bin/:$JUNIT" -Xverify:none "com.roklenarcic.util.strings.$3"
-
-rm *.class
+mvn clean test-compile
+echo -e "\n" | mvn exec:java -Dexec.mainClass="com.roklenarcic.util.strings.$3" -Dexec.classpathScope="test"

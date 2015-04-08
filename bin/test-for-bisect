@@ -1,7 +1,7 @@
 #!/bin/bash
 
-rm -rf bin/*
-javac -d bin/ src/com/roklenarcic/util/strings/*
-javac -cp "bin/:$JUNIT" -d bin/ test/com/roklenarcic/util/strings/*
+set -eu -o pipefail
+cd $(dirname $(dirname $0))
 
-echo -e "\n" | java -cp "bin/:$JUNIT" -Xverify:none "com.roklenarcic.util.strings.$1"
+mvn clean test-compile
+echo -e "\n" | mvn exec:java -Dexec.mainClass="com.roklenarcic.util.strings.$1" -Dexec.classpathScope="test"
