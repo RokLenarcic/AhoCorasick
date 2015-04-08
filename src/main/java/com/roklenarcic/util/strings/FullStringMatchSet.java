@@ -15,9 +15,8 @@ class FullStringMatchSet {
 		for (final String keyword : keywords) {
 			// Skip any empty keywords
 			if (keyword != null && keyword.length() > 0) {
-				// Start with the current node and traverse the tree
-				// character by character. Add nodes as needed to
-				// fill out the tree.
+				// Start with the current node and traverse the tree character by character.
+				// Add nodes as needed to fill out the tree.
 				HashmapNode currentNode = (HashmapNode) root;
 				for (int idx = 0; idx < keyword.length(); idx++) {
 					currentNode = currentNode.getOrAddChild(caseSensitive ? keyword.charAt(idx) : Character.toLowerCase(keyword.charAt(idx)));
@@ -230,9 +229,7 @@ class FullStringMatchSet {
 
 	// Basic node for both
 	private static abstract class TrieNode {
-
 		public abstract TrieNode getTransition(char c);
-
 	}
 
 }
