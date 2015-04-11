@@ -36,6 +36,12 @@ public class FullStringMatchTest {
 	}
 
 	@Test
+	public void testEmptyString() {
+		final String[] smallDict = generateRandomStrings(10000, 2, 3);
+		test("", smallDict);
+	}
+
+	@Test
 	public void testFullRandom() {
 		final String[] smallDict = generateRandomStrings(10000, 2, 3);
 		final String[] mediumDict = generateRandomStrings(100000, 2, 3);
