@@ -7,12 +7,12 @@ echo -e "Testing branch $1\n"
 
 git checkout $1
 
-mvn clean test-compile
-echo -e "\n" | mvn exec:java -Dexec.mainClass="com.roklenarcic.util.strings.$3" -Dexec.classpathScope="test"
+mvn -q clean test-compile
+echo -e "\n" | mvn -q exec:java -Dexec.mainClass="com.roklenarcic.util.strings.$3" -Dexec.classpathScope="test"
 
 echo -e "\nTesing branch $2\n"
 
 git checkout $2
 
-mvn clean test-compile
-echo -e "\n" | mvn exec:java -Dexec.mainClass="com.roklenarcic.util.strings.$3" -Dexec.classpathScope="test"
+mvn -q clean test-compile
+echo -e "\n" | mvn -q exec:java -Dexec.mainClass="com.roklenarcic.util.strings.$3" -Dexec.classpathScope="test"
