@@ -152,6 +152,7 @@ class ShortestMatchSet {
 
 		// Start with the root node.
 		TrieNode currentNode = root;
+		String currentNodeMatch = currentNode.match;
 
 		int idx = 0;
 		// For each character.
@@ -161,50 +162,56 @@ class ShortestMatchSet {
 		if (caseSensitive) {
 			while (idx < len) {
 				final char c = haystack.charAt(idx);
-				// Try to transition from the current node using the character
-				TrieNode nextNode = currentNode.getTransition(c);
-
-				// If cannot transition, follow the fail transition until finding
-				// node X where you can transition to another node Y using this
-				// character. Take the transition.
-				while (nextNode == null) {
-					// Transition follow one fail transition
-					currentNode = currentNode.getFailTransition();
-					// See if you can transition to another node with this
-					// character. Note that root node will return itself for any
-					// missing transition.
-					nextNode = currentNode.getTransition(c);
+				if (currentNodeMatch != null) {
+					// Output any matches on the current node
+					// and jump to root, only leaf nodes have matches so next character won't match anything
+					if (!listener.match(currentNodeMatch, idx)) {
+						break;
+					}
+					// currentNode = root.children[c];
+					currentNode = root.getTransition(c);
+				} else {
+					// Try to transition from the current node using the character
+					TrieNode nextNode = currentNode.getTransition(c);
+					while (nextNode == null) {
+						currentNode = currentNode.failTransition;
+						nextNode = currentNode.getTransition(c);
+					}
+					currentNode = nextNode;
 				}
-				// Take the transition.
-				currentNode = nextNode;
-				// Output any matches on the current node and increase the index
-				if (!currentNode.output(listener, ++idx)) {
-					break;
-				}
+				currentNodeMatch = currentNode.match;
+				++idx;
+			}
+			if (currentNodeMatch != null) {
+				// Output any matches on the last node
+				listener.match(currentNodeMatch, idx);
 			}
 		} else {
 			while (idx < len) {
 				final char c = Character.toLowerCase(haystack.charAt(idx));
-				// Try to transition from the current node using the character
-				TrieNode nextNode = currentNode.getTransition(c);
-
-				// If cannot transition, follow the fail transition until finding
-				// node X where you can transition to another node Y using this
-				// character. Take the transition.
-				while (nextNode == null) {
-					// Transition follow one fail transition
-					currentNode = currentNode.getFailTransition();
-					// See if you can transition to another node with this
-					// character. Note that root node will return itself for any
-					// missing transition.
-					nextNode = currentNode.getTransition(c);
+				if (currentNodeMatch != null) {
+					// Output any matches on the current node
+					// and jump to root, only leaf nodes have matches so next character won't match anything
+					if (!listener.match(currentNodeMatch, idx)) {
+						break;
+					}
+					// currentNode = root.children[c];
+					currentNode = root.getTransition(c);
+				} else {
+					// Try to transition from the current node using the character
+					TrieNode nextNode = currentNode.getTransition(c);
+					while (nextNode == null) {
+						currentNode = currentNode.failTransition;
+						nextNode = currentNode.getTransition(c);
+					}
+					currentNode = nextNode;
 				}
-				// Take the transition.
-				currentNode = nextNode;
-				// Output any matches on the current node and increase the index
-				if (!currentNode.output(listener, ++idx)) {
-					break;
-				}
+				currentNodeMatch = currentNode.match;
+				++idx;
+			}
+			if (currentNodeMatch != null) {
+				// Output any matches on the last node
+				listener.match(currentNodeMatch, idx);
 			}
 		}
 	}
@@ -458,17 +465,6 @@ class ShortestMatchSet {
 		public abstract boolean isEmpty();
 
 		public abstract void mapEntries(final EntryVisitor visitor);
-
-		// Report matches at this node. Use at matching.
-		public final boolean output(MatchListener listener, int idx) {
-			// since idx is the last character in the match
-			// position it past the match (to be consistent with conventions)
-			boolean ret = true;
-			if (match != null) {
-				ret = listener.match(match, idx);
-			}
-			return ret;
-		}
 
 	}
 
