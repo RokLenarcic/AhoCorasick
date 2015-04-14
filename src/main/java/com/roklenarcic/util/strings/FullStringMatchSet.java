@@ -31,6 +31,10 @@ class FullStringMatchSet {
 
 	public void match(final String haystack, final MatchListener listener) {
 
+		if (haystack.length() == 0) {
+			return;
+		}
+
 		// Start with the root node.
 		TrieNode currentNode = root;
 
