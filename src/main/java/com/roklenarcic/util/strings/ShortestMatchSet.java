@@ -4,8 +4,9 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-// Standard Aho-Corasick set
-// It matches all occurences of the strings in the set anywhere.
+// Matches rightmost shortest matches. Useful when you want non-overlapping
+// matches with a string set that doesn't have strings that are prefix to other
+// strings in the set.
 // It is highly optimized for this particular use.
 class ShortestMatchSet {
 

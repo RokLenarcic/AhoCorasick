@@ -124,6 +124,7 @@ public class ShortestMatchTest {
 			testString = testString + " " + keywords[i];
 		}
 		test(testString, keywords);
+		test("abcyyyy", "abcd", "bcxxxx", "cyyyy");
 	}
 
 	private String[] generateRandomStrings(final int n, final int minSize, final int maxSize) {
