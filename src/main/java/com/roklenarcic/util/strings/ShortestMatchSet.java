@@ -1,8 +1,6 @@
 package com.roklenarcic.util.strings;
 
-import java.util.ArrayDeque;
 import java.util.Arrays;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -80,19 +78,21 @@ class ShortestMatchSet {
 							parentFail = parentFail.getFailTransition();
 						}
 					} while (value.failTransition == null);
-					// Now that we have a fail transition, this node matches all
-					// the matches of it's failTransition node in addition to any
-					// match it already has.
-					// e.g for keywords "abc", "bc", "c", "b", the "abc" node matches
-					// "abc" and also its failure transtion's matches ("bc", "c")
-					// "ab" has no match of its own, but it matches failure transition's
-					// match "b"
+					// Now that we have a fail transition, if this node has no match,
+					// find follow fail transitions to find a node that has match.
 					if (value.match == null) {
 						TrieNode fail = value.failTransition;
 						while (fail != root && fail.match == null) {
 							fail = fail.failTransition;
 						}
 						value.match = fail.match;
+					}
+					// If node has any kind of match (naturally or from fail transition),
+					// then no progression is possible, so clear all the transitions, also,
+					// make fail transition a root.
+					if (value.match != null) {
+						value.clear();
+						value.failTransition = root;
 					}
 				}
 				// Queue the non-leaf node.
@@ -106,49 +106,6 @@ class ShortestMatchSet {
 		while (!queue.isEmpty()) {
 			queue.pop().mapEntries(failTransAndOutputsVisitor);
 		}
-
-		EntryVisitor eliminateOutputsTooLong = new EntryVisitor() {
-
-			private Deque<Integer> lastMatches = new ArrayDeque<Integer>();
-			private int level = 0;
-
-			public void visit(TrieNode parent, char key, TrieNode value) {
-				if (value.match != null) {
-					// Find a match that is short enough.
-					Integer lastMatchLevel = lastMatches.peekLast();
-					if (lastMatchLevel != null) {
-						TrieNode n = value;
-						while (n != root) {
-							if (n.match != null && (lastMatchLevel + n.match.length() <= level)) {
-								value.match = n.match;
-								if (n == value) {
-									value.failTransition = root;
-								} else {
-									value.failTransition = n;
-								}
-								lastMatches.addLast(level);
-								break;
-							}
-							n = failTransitions.get(n);
-						}
-					} else {
-						lastMatches.addLast(level);
-						value.failTransition = root;
-					}
-				}
-				// go depth first
-				level++;
-				if (!value.isEmpty()) {
-					value.mapEntries(this);
-				}
-				level--;
-				if (lastMatches.peekLast() != null && lastMatches.peekLast() == level) {
-					lastMatches.removeLast();
-				}
-			}
-
-		};
-		root.mapEntries(eliminateOutputsTooLong);
 
 		// Fill out ranged nodes depth first otherwise the filled out extra nodes
 		// get queued and you get an endless queue.
@@ -302,6 +259,14 @@ class ShortestMatchSet {
 		}
 
 		@Override
+		public void clear() {
+			children = new TrieNode[1];
+			keys = new char[1];
+			modulusMask = keys.length - 1;
+			numEntries = 0;
+		}
+
+		@Override
 		public TrieNode getTransition(final char key) {
 			int defaultSlot = hash(key) & modulusMask;
 			int currentSlot = defaultSlot;
@@ -432,6 +397,13 @@ class ShortestMatchSet {
 		}
 
 		@Override
+		public void clear() {
+			children = null;
+			size = 0;
+
+		}
+
+		@Override
 		public TrieNode getTransition(char c) {
 			// First check if the key is between max and min value.
 			// Here we use the fact that char type is unsigned to figure it out
@@ -471,6 +443,8 @@ class ShortestMatchSet {
 		protected TrieNode(boolean root) {
 			this.defaultTransition = root ? this : null;
 		}
+
+		public abstract void clear();
 
 		// Get fail transition
 		public final TrieNode getFailTransition() {

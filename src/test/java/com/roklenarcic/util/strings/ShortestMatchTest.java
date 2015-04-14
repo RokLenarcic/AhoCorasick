@@ -164,7 +164,6 @@ public class ShortestMatchTest {
 
 			public boolean match(final String word, final int endPosition) {
 				count++;
-				System.out.println("F " + word);
 				Assert.assertTrue("Could not find needle " + word + " at end position " + endPosition + " in \n" + haystack,
 						keywords.contains(haystack.substring(endPosition - word.length(), endPosition)));
 				return true;
@@ -196,7 +195,6 @@ public class ShortestMatchTest {
 			for (final String needle : needles) {
 				if (i + needle.length() <= haystack.length() && haystack.substring(i, i + needle.length()).equals(needle)) {
 					normalCount++;
-					System.out.println("N " + needle);
 					i += needle.length() - 1;
 					break;
 				}
