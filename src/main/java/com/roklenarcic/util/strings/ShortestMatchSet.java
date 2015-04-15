@@ -168,7 +168,6 @@ class ShortestMatchSet {
 					if (!listener.match(currentNodeMatch, idx)) {
 						break;
 					}
-					// currentNode = root.children[c];
 					currentNode = root.getTransition(c);
 				} else {
 					// Try to transition from the current node using the character
@@ -195,7 +194,6 @@ class ShortestMatchSet {
 					if (!listener.match(currentNodeMatch, idx)) {
 						break;
 					}
-					// currentNode = root.children[c];
 					currentNode = root.getTransition(c);
 				} else {
 					// Try to transition from the current node using the character
