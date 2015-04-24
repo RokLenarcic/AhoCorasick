@@ -170,7 +170,6 @@ public class LongestMatchTest {
 
 			public boolean match(final String word, final int endPosition) {
 				count++;
-				System.out.println("S " + word);
 				Assert.assertTrue("Could not find needle " + word + " at end position " + endPosition + " in \n" + haystack,
 						keywords.contains(haystack.substring(endPosition - word.length(), endPosition)));
 				return true;
@@ -201,7 +200,6 @@ public class LongestMatchTest {
 		for (int i = 0; i < haystack.length(); i++) {
 			for (final String needle : needles) {
 				if (i + needle.length() <= haystack.length() && haystack.substring(i, i + needle.length()).equals(needle)) {
-					System.out.println("N " + needle);
 					normalCount++;
 					i += needle.length() - 1;
 					break;

@@ -9,32 +9,28 @@ public class MatchQueue {
 		emptySlotIdx = 0;
 	}
 
-	public int[] getIndexes() {
-		if (isEmpty()) {
-			return null;
-		} else {
-			int[] ret = new int[emptySlotIdx];
-			for (int i = 0; i < ret.length; i++) {
-				ret[i] = indexes[i];
-			}
-			return ret;
-		}
-	}
-
-	public String[] getMatches() {
-		if (isEmpty()) {
-			return null;
-		} else {
-			String[] ret = new String[emptySlotIdx];
-			for (int i = 0; i < ret.length; i++) {
-				ret[i] = matches[i];
-			}
-			return ret;
-		}
-	}
-
 	public boolean isEmpty() {
 		return emptySlotIdx == 0;
+	}
+
+	public boolean matchAndClear(MatchListener listener, int purgeToIndex) {
+		if (!isEmpty()) {
+			int i = 0;
+			while (i < emptySlotIdx) {
+				if (indexes[i] <= purgeToIndex) {
+					if (!listener.match(matches[i], indexes[i])) {
+						return false;
+					}
+				} else {
+					break;
+				}
+				i++;
+			}
+			emptySlotIdx = emptySlotIdx - i;
+			System.arraycopy(indexes, i, indexes, 0, emptySlotIdx);
+			System.arraycopy(matches, i, matches, 0, emptySlotIdx);
+		}
+		return true;
 	}
 
 	public boolean push(String match, int idx) {

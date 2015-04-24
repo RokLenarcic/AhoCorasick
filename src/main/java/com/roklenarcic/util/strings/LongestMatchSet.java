@@ -12,7 +12,7 @@ class LongestMatchSet {
 
 	public LongestMatchSet(final Iterable<String> keywords, boolean caseSensitive) {
 		// Create the root node
-		root = new HashmapNode(true);
+		root = new HashmapNode(true, 0);
 		// Add all keywords
 		for (final String keyword : keywords) {
 			// Skip any empty keywords
@@ -145,7 +145,7 @@ class LongestMatchSet {
 
 		// Start with the root node.
 		TrieNode currentNode = root;
-
+		MatchQueue queue = new MatchQueue();
 		int idx = 0;
 		// For each character.
 		final int len = haystack.length();
@@ -160,7 +160,9 @@ class LongestMatchSet {
 				// If cannot transition, follow the fail transition until finding
 				// node X where you can transition to another node Y using this
 				// character. Take the transition.
+				boolean failTransition = false;
 				while (nextNode == null) {
+					failTransition = true;
 					// Transition follow one fail transition
 					currentNode = currentNode.getFailTransition();
 					// See if you can transition to another node with this
@@ -170,11 +172,14 @@ class LongestMatchSet {
 				}
 				// Take the transition.
 				currentNode = nextNode;
-				// Output any matches on the current node and increase the index
-				if (!currentNode.output(listener, ++idx)) {
-					break;
+				// Output any matches on the current node
+				++idx;
+				currentNode.output(queue, idx);
+				if (failTransition && !queue.matchAndClear(listener, idx - currentNode.level)) {
+					return;
 				}
 			}
+			queue.matchAndClear(listener, Integer.MAX_VALUE);
 		} else {
 			while (idx < len) {
 				final char c = Character.toLowerCase(haystack.charAt(idx));
@@ -184,7 +189,9 @@ class LongestMatchSet {
 				// If cannot transition, follow the fail transition until finding
 				// node X where you can transition to another node Y using this
 				// character. Take the transition.
+				boolean failTransition = false;
 				while (nextNode == null) {
+					failTransition = true;
 					// Transition follow one fail transition
 					currentNode = currentNode.getFailTransition();
 					// See if you can transition to another node with this
@@ -194,11 +201,14 @@ class LongestMatchSet {
 				}
 				// Take the transition.
 				currentNode = nextNode;
-				// Output any matches on the current node and increase the index
-				if (!currentNode.output(listener, ++idx)) {
-					break;
+				// Output any matches on the current node
+				++idx;
+				currentNode.output(queue, idx);
+				if (failTransition && !queue.matchAndClear(listener, idx - currentNode.level)) {
+					return;
 				}
 			}
+			queue.matchAndClear(listener, Integer.MAX_VALUE);
 		}
 	}
 
@@ -248,8 +258,8 @@ class LongestMatchSet {
 		private int modulusMask = keys.length - 1;
 		private int numEntries = 0;
 
-		protected HashmapNode(boolean root) {
-			super(root);
+		protected HashmapNode(boolean root, int level) {
+			super(root, level);
 		}
 
 		@Override
@@ -328,7 +338,7 @@ class LongestMatchSet {
 			do {
 				if (children[currentSlot] == null) {
 					keys[currentSlot] = key;
-					HashmapNode newChild = new HashmapNode(false);
+					HashmapNode newChild = new HashmapNode(false, level + 1);
 					children[currentSlot] = newChild;
 					return newChild;
 				} else if (keys[currentSlot] == key) {
@@ -359,7 +369,7 @@ class LongestMatchSet {
 		private int size = 0;
 
 		private RangeNode(HashmapNode oldNode, char from, char to) {
-			super(oldNode.defaultTransition != null);
+			super(oldNode.defaultTransition != null, oldNode.level);
 			// Value of the first character
 			this.baseChar = from;
 			this.size = to - from + 1;
@@ -417,11 +427,13 @@ class LongestMatchSet {
 
 		protected TrieNode defaultTransition = null;
 		protected TrieNode failTransition;
+		protected int level = 0;
 		protected String match;
 		protected TrieNode suffixMatch;
 
-		protected TrieNode(boolean root) {
+		protected TrieNode(boolean root, int level) {
 			this.defaultTransition = root ? this : null;
+			this.level = level;
 		}
 
 		// Get fail transition
@@ -437,19 +449,22 @@ class LongestMatchSet {
 		public abstract void mapEntries(final EntryVisitor visitor);
 
 		// Report matches at this node. Use at matching.
-		public final boolean output(MatchListener listener, int idx) {
+		public final void output(MatchQueue queue, int idx) {
 			// since idx is the last character in the match
 			// position it past the match (to be consistent with conventions)
-			boolean ret = true;
+
+			// Since all matches at one node are overlapping suffix matches in descending
+			// length, first match accepted into the queue means subsequent matches won't be,
+			// so we return.
+			boolean matchAccepted = false;
 			if (match != null) {
-				ret = listener.match(match, idx);
+				matchAccepted = queue.push(match, idx);
 				TrieNode suffixMatch = this.suffixMatch;
-				while (suffixMatch != null && ret) {
-					ret = listener.match(suffixMatch.match, idx);
+				while (suffixMatch != null && !matchAccepted) {
+					matchAccepted = queue.push(suffixMatch.match, idx);
 					suffixMatch = suffixMatch.suffixMatch;
 				}
 			}
-			return ret;
 		}
 	}
 
