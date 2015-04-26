@@ -1,8 +1,6 @@
 package com.roklenarcic.util.strings;
 
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 
 // Matches rightmost shortest matches. Useful when you want non-overlapping
 // matches with a string set that doesn't have strings that are prefix to other
@@ -46,7 +44,6 @@ class ShortestMatchSet {
 		// for all 2 letter words.
 		//
 		// Setup a queue to enable breath-first processing.
-		final Map<TrieNode, TrieNode> failTransitions = new HashMap<TrieNode, TrieNode>();
 		final Queue<TrieNode> queue = new Queue<TrieNode>();
 		EntryVisitor failTransAndOutputsVisitor = new EntryVisitor() {
 
@@ -70,7 +67,6 @@ class ShortestMatchSet {
 						final TrieNode matchContinuation = parentFail.getTransition(key);
 						if (matchContinuation != null) {
 							value.failTransition = matchContinuation;
-							failTransitions.put(value, value.failTransition);
 						} else {
 							// If parentFail didn't have key mapping
 							// take parentFail's failTransition and try again
