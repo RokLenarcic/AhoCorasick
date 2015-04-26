@@ -130,19 +130,34 @@ class WholeWordMatchSet {
 		// Create the root node
 		root = new HashmapNode();
 		// Add all keywords
-		for (final String keyword : keywords) {
+		for (String keyword : keywords) {
 			// Skip any empty keywords
-			if (keyword != null && keyword.length() > 0) {
-				// Start with the current node and traverse the tree
-				// character by character. Add nodes as needed to
-				// fill out the tree.
-				HashmapNode currentNode = (HashmapNode) root;
-				for (int idx = 0; idx < keyword.length(); idx++) {
-					currentNode = currentNode.getOrAddChild(caseSensitive ? keyword.charAt(idx) : Character.toLowerCase(keyword.charAt(idx)));
+			if (keyword != null) {
+				// Trim any non-word chars from the start and the end.
+				for (int i = 0; i < keyword.length(); i++) {
+					if (wordChars[keyword.charAt(i)]) {
+						keyword = keyword.substring(i);
+						break;
+					}
 				}
-				// Last node will contains the keyword as a match.
-				// Suffix matches will be added later.
-				currentNode.match = keyword;
+				for (int i = keyword.length() - 1; i >= 0; i--) {
+					if (wordChars[keyword.charAt(i)]) {
+						keyword = keyword.substring(0, i + 1);
+						break;
+					}
+				}
+				if (keyword.length() > 0) {
+					// Start with the current node and traverse the tree
+					// character by character. Add nodes as needed to
+					// fill out the tree.
+					HashmapNode currentNode = (HashmapNode) root;
+					for (int idx = 0; idx < keyword.length(); idx++) {
+						currentNode = currentNode.getOrAddChild(caseSensitive ? keyword.charAt(idx) : Character.toLowerCase(keyword.charAt(idx)));
+					}
+					// Last node will contains the keyword as a match.
+					// Suffix matches will be added later.
+					currentNode.match = keyword;
+				}
 			}
 		}
 		// Go through nodes depth first, swap any hashmap nodes,

@@ -144,6 +144,9 @@ public class WholeWordMatchTest {
 		});
 		final List<String> keywords = Arrays.asList(needles);
 		final WholeWordMatchSet set = new WholeWordMatchSet(keywords, true);
+		for (int i = 0; i < keywords.size(); i++) {
+			keywords.set(i, keywords.get(i).trim());
+		}
 		System.gc();
 		try {
 			Thread.sleep(500);
@@ -156,7 +159,6 @@ public class WholeWordMatchTest {
 
 			public boolean match(final String word, final int endPosition) {
 				count++;
-				System.out.println("T " + word);
 				Assert.assertTrue("Could not find needle " + word + " at end position " + endPosition + " in \n" + haystack,
 						keywords.contains(haystack.substring(endPosition - word.length(), endPosition)));
 				Assert.assertTrue("Needle " + word + " at end position " + endPosition + " doesn't end in whitespace or string end in \n" + haystack,
@@ -190,10 +192,9 @@ public class WholeWordMatchTest {
 		int normalCount = 0;
 		for (int i = 0; i < haystack.length(); i++) {
 			for (final String needle : needles) {
-				if (i + needle.length() <= haystack.length() && haystack.substring(i, i + needle.length()).equals(needle)
+				if (needle.length() > 0 && i + needle.length() <= haystack.length() && haystack.substring(i, i + needle.length()).equals(needle)
 						&& (i + needle.length() == haystack.length() || !Character.isLetterOrDigit(haystack.charAt(i + needle.length())))
 						&& (i == 0 || !Character.isLetterOrDigit(haystack.charAt(i - 1)))) {
-					System.out.println("N " + needle);
 					normalCount++;
 					i += needle.length() - 1;
 					while (++i < haystack.length() && !set.getWordChars()[haystack.charAt(i)]) {
