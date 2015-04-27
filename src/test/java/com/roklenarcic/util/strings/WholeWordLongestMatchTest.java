@@ -6,26 +6,28 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
 
-public class WholeWordMatchTest {
+public class WholeWordLongestMatchTest {
 
 	public static void main(final String[] args) throws IOException {
 		System.in.read();
-		new WholeWordMatchTest(true, 1000000).testLiteral();
-		new WholeWordMatchTest(true, 1000000).testOverlap();
-		new WholeWordMatchTest(true, 1000000).testLongKeywords();
-		new WholeWordMatchTest(true, 1000000).testFailureTransitions();
-		new WholeWordMatchTest(true, 1000000).testDictionary();
-		new WholeWordMatchTest(true, 1000000).testShortestMatch();
+		new WholeWordLongestMatchTest(true, 1000000).testLiteral();
+		new WholeWordLongestMatchTest(true, 1000000).testOverlap();
+		new WholeWordLongestMatchTest(true, 1000000).testLongKeywords();
+		new WholeWordLongestMatchTest(true, 1000000).testFullRandom();
+		new WholeWordLongestMatchTest(true, 1000000).testFailureTransitions();
+		new WholeWordLongestMatchTest(true, 1000000).testDictionary();
+		new WholeWordLongestMatchTest(true, 1000000).testShortestMatch();
 	}
 
 	@Rule
@@ -34,11 +36,11 @@ public class WholeWordMatchTest {
 	private final boolean printTimesOnly;
 	private int testLoopSize = 10000;
 
-	public WholeWordMatchTest() {
+	public WholeWordLongestMatchTest() {
 		this(false, 10000);
 	}
 
-	private WholeWordMatchTest(final boolean printTimesOnly, int testLoopSize) {
+	private WholeWordLongestMatchTest(final boolean printTimesOnly, int testLoopSize) {
 		this.printTimesOnly = printTimesOnly;
 		this.testLoopSize = testLoopSize;
 	}
@@ -70,9 +72,14 @@ public class WholeWordMatchTest {
 		test("abbccddeef", "bc", "cc", "bcc", "ccddee", "ccddeee", "d");
 	}
 
-	@Test(expected = IllegalArgumentException.class)
-	public void testKeywordsWithNWCRejection() {
-		new WholeWordMatchSet(Collections.singleton("A B"), true);
+	@Test
+	public void testFullRandom() {
+		final String[] smallDict = generateRandomStrings(10000, 2, 3);
+		final String[] mediumDict = generateRandomStrings(100000, 2, 3);
+		final String[] largeDict = generateRandomStrings(1000000, 2, 3);
+		test("The quick red fox, jumps over the lazy brown dog.", smallDict);
+		test("The quick red fox, jumps over the lazy brown dog.", mediumDict);
+		test("The quick red fox, jumps over the lazy brown dog.", largeDict);
 	}
 
 	@Test
@@ -111,6 +118,31 @@ public class WholeWordMatchTest {
 		test("abcyyyy", "abcd", "bcxxxx", "cyyyy");
 	}
 
+	@Test
+	public void testWholeWordLongest() {
+		test("as if", "as", "if", "as if");
+		test("ax if", "as", "if", "as if");
+		test("as in", "as", "if", "as if");
+		test("123 4x 1234 5x 1234 56 123 45 1x 345 12 34x 12 345x 123xb 1234 56s", "123", "123 45", "1234 56", "12 345");
+	}
+
+	private String[] generateRandomStrings(final int n, final int minSize, final int maxSize) {
+		final Set<String> ret = new HashSet<String>();
+		final char[] buf = new char[maxSize];
+		final Random r = new Random();
+		for (int i = 0; i < n; i++) {
+			for (int j = 0; j < maxSize; j++) {
+				if (r.nextBoolean()) {
+					buf[j] = (char) r.nextInt(256);
+				} else {
+					buf[j] = (char) r.nextInt();
+				}
+			}
+			ret.add(new String(buf, 0, r.nextInt(maxSize - minSize) + minSize));
+		}
+		return ret.toArray(new String[ret.size()]);
+	}
+
 	private void test(final String haystack, final String... needles) {
 		Arrays.sort(needles, new Comparator<String>() {
 
@@ -119,7 +151,7 @@ public class WholeWordMatchTest {
 			}
 		});
 		final List<String> keywords = Arrays.asList(needles);
-		final WholeWordMatchSet set = new WholeWordMatchSet(keywords, true);
+		final WholeWordLongestMatchSet set = new WholeWordLongestMatchSet(keywords, true);
 		for (int i = 0; i < keywords.size(); i++) {
 			keywords.set(i, keywords.get(i).trim());
 		}

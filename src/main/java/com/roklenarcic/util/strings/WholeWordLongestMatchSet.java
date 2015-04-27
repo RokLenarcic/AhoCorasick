@@ -1,14 +1,14 @@
 package com.roklenarcic.util.strings;
 
 // Matches leftmost shortest whole word matches.
-class WholeWordMatchSet {
+class WholeWordLongestMatchSet {
 
 	private boolean caseSensitive = true;
 	private TrieNode root;
 	private boolean[] wordChars;
 
 	// Set where digits and letters, '-' and '_' are considered word characters.
-	public WholeWordMatchSet(final Iterable<String> keywords, boolean caseSensitive) {
+	public WholeWordLongestMatchSet(final Iterable<String> keywords, boolean caseSensitive) {
 		boolean[] characterFlags = new boolean[65536];
 		characterFlags['-'] = true;
 		characterFlags['_'] = true;
@@ -21,7 +21,7 @@ class WholeWordMatchSet {
 	}
 
 	// Set where the characters in the given array are considered word characters
-	public WholeWordMatchSet(final Iterable<String> keywords, boolean caseSensitive, char[] wordCharacters) {
+	public WholeWordLongestMatchSet(final Iterable<String> keywords, boolean caseSensitive, char[] wordCharacters) {
 		boolean[] characterFlags = new boolean[65536];
 		for (char c : wordCharacters) {
 			characterFlags[c] = true;
@@ -31,7 +31,7 @@ class WholeWordMatchSet {
 
 	// Set where digits and letters and '-' and '_' are considered word characters but modified by the two
 	// given arrays
-	public WholeWordMatchSet(final Iterable<String> keywords, boolean caseSensitive, char[] wordCharacters, boolean[] enableCharacterFlags) {
+	public WholeWordLongestMatchSet(final Iterable<String> keywords, boolean caseSensitive, char[] wordCharacters, boolean[] enableCharacterFlags) {
 		boolean[] characterFlags = new boolean[65536];
 		characterFlags['-'] = true;
 		characterFlags['_'] = true;
@@ -61,13 +61,23 @@ class WholeWordMatchSet {
 				char c = haystack.charAt(idx);
 				TrieNode nextNode = currentNode.getTransition(c);
 				if (nextNode == null) {
+					// Awkward if structure saves us a branch in the else statement.
 					if (!wordChars[c]) {
 						if (currentNode.match != null) {
 							if (!listener.match(currentNode.match, idx)) {
 								return;
 							}
+						} else if (currentNode.failMatch != null) {
+							if (!listener.match(currentNode.failMatch, idx - currentNode.failMatchOffset)) {
+								return;
+							}
 						}
 					} else {
+						if (currentNode.failMatch != null) {
+							if (!listener.match(currentNode.failMatch, idx - currentNode.failMatchOffset)) {
+								return;
+							}
+						}
 						// Scroll to the first non-word character
 						while (++idx < len && wordChars[haystack.charAt(idx)]) {
 							;
@@ -125,7 +135,7 @@ class WholeWordMatchSet {
 		return wordChars;
 	}
 
-	private void init(final Iterable<String> keywords, boolean caseSensitive, boolean[] wordChars) {
+	private void init(final Iterable<String> keywords, boolean caseSensitive, final boolean[] wordChars) {
 		this.wordChars = wordChars;
 		// Create the root node
 		root = new HashmapNode();
@@ -152,12 +162,6 @@ class WholeWordMatchSet {
 				if (wordStart != 0 || wordEnd != keyword.length()) {
 					keyword = keyword.substring(wordStart, wordEnd);
 				}
-				// Don't allow words with non-word characters in them.
-				for (int i = 0; i < keyword.length(); i++) {
-					if (!wordChars[keyword.charAt(i)]) {
-						throw new IllegalArgumentException(keyword + " contains non-word characters.");
-					}
-				}
 				if (keyword.length() > 0) {
 					// Start with the current node and traverse the tree
 					// character by character. Add nodes as needed to
@@ -176,6 +180,29 @@ class WholeWordMatchSet {
 		// whose size is close to the size of range of keys with
 		// flat array based nodes.
 		root = optimizeNodes(root);
+		// Fill the failMatchValues
+		root.mapEntries(new EntryVisitor() {
+
+			private String failMatch = null;
+			private int failMatchOffset = 0;
+
+			public void visit(TrieNode parent, char key, TrieNode value) {
+				String fm = failMatch;
+				int offset = failMatchOffset;
+				if (parent.match != null && !wordChars[key]) {
+					failMatch = parent.match;
+					failMatchOffset = 1;
+				} else {
+					failMatchOffset++;
+				}
+				value.failMatch = failMatch;
+				value.failMatchOffset = failMatchOffset;
+				value.mapEntries(this);
+				failMatch = fm;
+				failMatchOffset = offset;
+
+			}
+		});
 	}
 
 	// A recursive function that replaces hashmap nodes with range nodes
@@ -208,12 +235,17 @@ class WholeWordMatchSet {
 		return n;
 	}
 
+	private interface EntryVisitor {
+		void visit(TrieNode parent, char key, TrieNode value);
+	}
+
 	// An open addressing hashmap implementation with linear probing
 	// and capacity of 2^n
 	private final static class HashmapNode extends TrieNode {
 
 		// Start with capacity of 1 and resize as needed.
 		private TrieNode[] children = new TrieNode[1];
+
 		private char[] keys = new char[1];
 		// Since capacity is a power of 2, we calculate mod by just
 		// bitwise AND with the right mask.
@@ -248,6 +280,15 @@ class WholeWordMatchSet {
 		@Override
 		public boolean isEmpty() {
 			return numEntries == 0;
+		}
+
+		@Override
+		public void mapEntries(EntryVisitor visitor) {
+			for (int i = 0; i < keys.length; i++) {
+				if (children[i] != null) {
+					visitor.visit(this, keys[i], children[i]);
+				}
+			}
 		}
 
 		// Double the capacity of the node, calculate the new mask,
@@ -367,11 +408,24 @@ class WholeWordMatchSet {
 			return size == 0;
 		}
 
+		@Override
+		public void mapEntries(EntryVisitor visitor) {
+			if (children != null) {
+				for (int i = 0; i < children.length; i++) {
+					if (children[i] != null && children[i] != this) {
+						visitor.visit(this, (char) (baseChar + i), children[i]);
+					}
+				}
+			}
+		}
+
 	}
 
 	// Basic node for both
 	private static abstract class TrieNode {
 
+		protected String failMatch;
+		protected int failMatchOffset;
 		protected String match;
 
 		public abstract void clear();
@@ -380,6 +434,8 @@ class WholeWordMatchSet {
 		public abstract TrieNode getTransition(char c);
 
 		public abstract boolean isEmpty();
+
+		public abstract void mapEntries(final EntryVisitor visitor);
 
 	}
 
