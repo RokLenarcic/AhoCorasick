@@ -9,7 +9,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Random;
 
 import org.junit.Assert;
 import org.junit.Rule;
@@ -82,11 +81,7 @@ public class WholeWordMatchTest {
 
     @Test
     public void testLongKeywords() {
-        final String[] keywords = new String[100];
-        keywords[0] = "a";
-        for (int i = 1; i < keywords.length; i++) {
-            keywords[i] = keywords[i - 1] + "a";
-        }
+        final String[] keywords = Generator.repeating(100, "a");
         test(keywords[keywords.length - 1], keywords);
     }
 
@@ -98,16 +93,8 @@ public class WholeWordMatchTest {
 
     @Test
     public void testShortestMatch() {
-        final String[] keywords = new String[1000];
-        Random r = new Random();
-        for (int i = 0; i < keywords.length; i++) {
-            keywords[i] = String.format("%10d", r.nextInt());
-        }
-        String testString = "";
-        for (int i = 0; i < 50; i++) {
-            testString = testString + " " + keywords[i];
-        }
-        test(testString, keywords);
+        final String[] keywords = Generator.randomNumbers(1000);
+        test(Generator.combinedStrings(keywords, 50), keywords);
         test("abcyyyy", "abcd", "bcxxxx", "cyyyy");
     }
 

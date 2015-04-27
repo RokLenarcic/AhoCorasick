@@ -7,10 +7,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
-import java.util.Set;
 
 import org.junit.Assert;
 import org.junit.Rule;
@@ -83,9 +80,9 @@ public class LongestMatchTest {
 
     @Test
     public void testFullRandom() {
-        final String[] smallDict = generateRandomStrings(10000, 2, 3);
-        final String[] mediumDict = generateRandomStrings(100000, 2, 3);
-        final String[] largeDict = generateRandomStrings(1000000, 2, 3);
+        final String[] smallDict = Generator.randomStrings(10000, 2, 3);
+        final String[] mediumDict = Generator.randomStrings(100000, 2, 3);
+        final String[] largeDict = Generator.randomStrings(1000000, 2, 3);
         test("The quick red fox, jumps over the lazy brown dog.", smallDict);
         test("The quick red fox, jumps over the lazy brown dog.", mediumDict);
         test("The quick red fox, jumps over the lazy brown dog.", largeDict);
@@ -103,11 +100,7 @@ public class LongestMatchTest {
 
     @Test
     public void testLongKeywords() {
-        final String[] keywords = new String[100];
-        keywords[0] = "a";
-        for (int i = 1; i < keywords.length; i++) {
-            keywords[i] = keywords[i - 1] + "a";
-        }
+        final String[] keywords = Generator.repeating(100, "a");
         test(keywords[keywords.length - 1], keywords);
     }
 
@@ -119,34 +112,9 @@ public class LongestMatchTest {
 
     @Test
     public void testShortestMatch() {
-        final String[] keywords = new String[1000];
-        Random r = new Random();
-        for (int i = 0; i < keywords.length; i++) {
-            keywords[i] = String.format("%10d", r.nextInt());
-        }
-        String testString = "";
-        for (int i = 0; i < 50; i++) {
-            testString = testString + " " + keywords[i];
-        }
-        test(testString, keywords);
+        final String[] keywords = Generator.randomNumbers(1000);
+        test(Generator.combinedStrings(keywords, 50), keywords);
         test("abcyyyy", "abcd", "bcxxxx", "cyyyy");
-    }
-
-    private String[] generateRandomStrings(final int n, final int minSize, final int maxSize) {
-        final Set<String> ret = new HashSet<String>();
-        final char[] buf = new char[maxSize];
-        final Random r = new Random();
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < maxSize; j++) {
-                if (r.nextBoolean()) {
-                    buf[j] = (char) r.nextInt(256);
-                } else {
-                    buf[j] = (char) r.nextInt();
-                }
-            }
-            ret.add(new String(buf, 0, r.nextInt(maxSize - minSize) + minSize));
-        }
-        return ret.toArray(new String[ret.size()]);
     }
 
     private void test(final String haystack, final String... needles) {
