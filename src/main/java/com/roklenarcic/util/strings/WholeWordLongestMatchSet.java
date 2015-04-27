@@ -102,13 +102,23 @@ class WholeWordLongestMatchSet {
                 char c = Character.toLowerCase(haystack.charAt(idx));
                 TrieNode nextNode = currentNode.getTransition(c);
                 if (nextNode == null) {
+                    // Awkward if structure saves us a branch in the else statement.
                     if (!wordChars[c]) {
                         if (currentNode.match != null) {
                             if (!listener.match(currentNode.match, idx)) {
                                 return;
                             }
+                        } else if (currentNode.failMatch != null) {
+                            if (!listener.match(currentNode.failMatch, idx - currentNode.failMatchOffset)) {
+                                return;
+                            }
                         }
                     } else {
+                        if (currentNode.failMatch != null) {
+                            if (!listener.match(currentNode.failMatch, idx - currentNode.failMatchOffset)) {
+                                return;
+                            }
+                        }
                         // Scroll to the first non-word character
                         while (++idx < len && wordChars[haystack.charAt(idx)]) {
                             ;
