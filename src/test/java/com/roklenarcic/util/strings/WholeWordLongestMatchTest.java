@@ -28,6 +28,7 @@ public class WholeWordLongestMatchTest {
 		new WholeWordLongestMatchTest(true, 1000000).testFailureTransitions();
 		new WholeWordLongestMatchTest(true, 1000000).testDictionary();
 		new WholeWordLongestMatchTest(true, 1000000).testShortestMatch();
+		new WholeWordLongestMatchTest(true, 1000000).testWholeWordLongest();
 	}
 
 	@Rule
