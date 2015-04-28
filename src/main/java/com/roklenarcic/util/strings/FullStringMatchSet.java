@@ -3,7 +3,7 @@ package com.roklenarcic.util.strings;
 // A set that matches only when one of the strings in the dictionary
 // matches the whole input string.
 // It is highly optimized for this particular use.
-class FullStringMatchSet {
+class FullStringMatchSet implements StringSet {
 
     private boolean caseSensitive = true;
     private TrieNode root;

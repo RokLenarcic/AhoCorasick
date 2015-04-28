@@ -1,20 +1,11 @@
 package com.roklenarcic.util.strings;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
-
-public class ShortestMatchTest {
+public class ShortestMatchTest extends SetTest {
 
     public static void main(final String[] args) throws IOException {
         System.in.read();
@@ -27,141 +18,19 @@ public class ShortestMatchTest {
         new ShortestMatchTest(true, 1000000).testShortestMatch();
     }
 
-    @Rule
-    public TestName name = new TestName();
-
-    private final boolean printTimesOnly;
-    private int testLoopSize = 10000;
-
     public ShortestMatchTest() {
-        this(false, 10000);
+        super();
     }
 
-    private ShortestMatchTest(final boolean printTimesOnly, int testLoopSize) {
-        this.printTimesOnly = printTimesOnly;
-        this.testLoopSize = testLoopSize;
+    private ShortestMatchTest(boolean printTimesOnly, int testLoopSize) {
+        super(printTimesOnly, testLoopSize);
     }
 
-    @Test
-    public void testDictionary() throws IOException {
-        File dictFile = new File("/usr/share/dict/words");
-        if (dictFile.exists()) {
-            BufferedReader str = new BufferedReader(new FileReader(dictFile));
-            try {
-                List<String> words = new ArrayList<String>();
-                String word = null;
-                while ((word = str.readLine()) != null) {
-                    words.add(word);
-                }
-                test("Values specified as nondelimited strings are interpreted according "
-                        + "their length. For a string 8 or 14 characters long, the year is assumed" + " to be given by the first 4 characters. Otherwise, the "
-                        + "year is assumed to be given by the first 2 characters. " + "The string is interpreted from left to right to find year,"
-                        + " month, day, hour, minute, and second values, for as many parts" + " as are present in the string. This means you should not use "
-                        + "strings that have fewer than 6 characters.", words.toArray(new String[words.size()]));
-            } finally {
-                str.close();
-            }
-        }
-    }
-
-    @Test
-    public void testFailureTransitions() {
-        test("abbccddeef", "bc", "cc", "bcc", "ccddee", "ccddeee", "d");
-    }
-
-    @Test
-    public void testFullNode() {
-        final String[] keywords = new String[65536];
-        for (int i = 0; i < keywords.length; i++) {
-            keywords[i] = String.valueOf((char) i);
-        }
-        test("\u0000\uffff\ufffe", keywords);
-    }
-
-    @Test
-    public void testFullRandom() {
-        final String[] smallDict = Generator.randomStrings(10000, 2, 3);
-        final String[] mediumDict = Generator.randomStrings(100000, 2, 3);
-        final String[] largeDict = Generator.randomStrings(1000000, 2, 3);
-        test("The quick red fox, jumps over the lazy brown dog.", smallDict);
-        test("The quick red fox, jumps over the lazy brown dog.", mediumDict);
-        test("The quick red fox, jumps over the lazy brown dog.", largeDict);
-    }
-
-    @Test
-    public void testLiteral() {
-        test("The quick red fox, jumps over the lazy brown dog.", "The", "quick", "red", "fox", "jumps", "over", "the", "lazy", "brown", "dog");
-    }
-
-    @Test
-    public void testLongKeywords() {
-        final String[] keywords = Generator.repeating(100, "a");
-        test(keywords[keywords.length - 1], keywords);
-    }
-
-    @Test
-    public void testOverlap() {
-        test("aaaa", "a", "aa", "aaa", "aaaa");
-        test(" aaaaaaa aaababababaabaa ", "a", "aa", "aaa", "aaaa");
-    }
-
-    @Test
-    public void testShortestMatch() {
-        final String[] keywords = Generator.randomNumbers(1000);
-        test(Generator.combinedStrings(keywords, 50), keywords);
-        test("abcyyyy", "abcd", "bcxxxx", "cyyyy");
-    }
-
-    private void test(final String haystack, final String... needles) {
-        Arrays.sort(needles, new Comparator<String>() {
-
-            public int compare(String o1, String o2) {
-                return o1.length() - o2.length();
-            }
-        });
-        final List<String> keywords = Arrays.asList(needles);
-        final ShortestMatchSet set = new ShortestMatchSet(keywords, true);
-        System.gc();
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        class CountingMatchListener implements MatchListener {
-
-            int count = 0;
-
-            public boolean match(final String word, final int endPosition) {
-                count++;
-                Assert.assertTrue("Could not find needle " + word + " at end position " + endPosition + " in \n" + haystack,
-                        keywords.contains(haystack.substring(endPosition - word.length(), endPosition)));
-                return true;
-            }
-        }
-        final CountingMatchListener listener = new CountingMatchListener();
-        final MatchListener performanceListener = new MatchListener() {
-
-            public boolean match(final String word, final int endPosition) {
-                return true;
-            }
-        };
-        set.match(haystack, listener);
-        final long timeStart = System.nanoTime();
-        for (int i = 0; i < testLoopSize; i++) {
-            set.match(haystack, performanceListener);
-        }
-        final long time = (System.nanoTime() - timeStart) / testLoopSize;
-        if (printTimesOnly) {
-            System.out.println(time);
-        } else {
-            String haystackShort = haystack.length() > 40 ? haystack.substring(0, 40) + "..." : haystack;
-            System.out.println(haystackShort + " in " + name.getMethodName() + " searched (matches " + listener.count + ") in " + time + "ns");
-        }
-        // Check count
-        final long countStartTime = System.nanoTime();
+    @Override
+    protected int getCorrectCount(List<String> keywords, String haystack, StringSet set) {
         int normalCount = 0;
         for (int i = 0; i < haystack.length(); i++) {
-            for (final String needle : needles) {
+            for (final String needle : keywords) {
                 if (i + needle.length() <= haystack.length() && haystack.substring(i, i + needle.length()).equals(needle)) {
                     normalCount++;
                     i += needle.length() - 1;
@@ -169,9 +38,23 @@ public class ShortestMatchTest {
                 }
             }
         }
-        if (!printTimesOnly) {
-            System.out.println("Normal count completed in : " + (System.nanoTime() - countStartTime) + "ns");
-        }
-        Assert.assertTrue("Trie found " + listener.count + " normal match found " + normalCount, normalCount == listener.count);
+        return normalCount;
     }
+
+    @Override
+    protected StringSet instantiateSet(List<String> keywords, boolean caseSensitive) {
+        return new ShortestMatchSet(keywords, caseSensitive);
+    }
+
+    @Override
+    protected List<String> prepareKeywords(String[] keywords) {
+        Arrays.sort(keywords, new Comparator<String>() {
+
+            public int compare(String o1, String o2) {
+                return o1.length() - o2.length();
+            }
+        });
+        return super.prepareKeywords(keywords);
+    }
+
 }

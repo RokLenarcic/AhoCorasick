@@ -1,7 +1,7 @@
 package com.roklenarcic.util.strings;
 
 // Matches leftmost shortest whole word matches.
-class WholeWordMatchSet {
+class WholeWordMatchSet implements StringSet {
 
     private boolean caseSensitive = true;
     private TrieNode root;

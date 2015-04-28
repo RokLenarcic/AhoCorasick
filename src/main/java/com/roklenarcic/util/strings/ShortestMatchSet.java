@@ -6,7 +6,7 @@ import java.util.Arrays;
 // matches with a string set that doesn't have strings that are prefix to other
 // strings in the set.
 // It is highly optimized for this particular use.
-class ShortestMatchSet {
+class ShortestMatchSet implements StringSet {
 
     private boolean caseSensitive = true;
     private TrieNode root;
