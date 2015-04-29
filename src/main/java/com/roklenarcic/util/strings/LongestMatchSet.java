@@ -5,7 +5,7 @@ import java.util.Arrays;
 // Standard Aho-Corasick set
 // It matches all occurences of the strings in the set anywhere.
 // It is highly optimized for this particular use.
-class LongestMatchSet {
+class LongestMatchSet implements StringSet {
 
     private boolean caseSensitive = true;
     private TrieNode root;
