@@ -29,14 +29,15 @@ public class WholeWordMatchTest extends SetTest {
     }
 
     @Override
-    @Ignore
+    @Test(expected = IllegalArgumentException.class)
     public void testEmptyString() {
-
+        super.testEmptyString();
     }
 
     @Override
-    @Ignore
+    @Test(expected = IllegalArgumentException.class)
     public void testFullNode() {
+        super.testFullNode();
     }
 
     @Override
@@ -50,14 +51,14 @@ public class WholeWordMatchTest extends SetTest {
     }
 
     @Override
-    @Ignore
+    @Test(expected = IllegalArgumentException.class)
     public void testWholeWordLongest() {
+        super.testWholeWordLongest();
     }
 
     @Override
     protected void assertCorrectMatch(String word, int endPosition, List<String> keywords, String haystack, StringSet set) {
         WholeWordMatchSet wwset = (WholeWordMatchSet) set;
-        System.out.println("Word " + (int) word.charAt(0) + " at length " + word.length());
         Assert.assertTrue("Could not find needle " + word + " at end position " + endPosition + " in \n" + haystack,
                 keywords.contains(haystack.substring(endPosition - word.length(), endPosition)));
         Assert.assertTrue("Needle " + word + " at end position " + endPosition + " doesn't end in whitespace or string end in \n" + haystack,
@@ -88,11 +89,34 @@ public class WholeWordMatchTest extends SetTest {
 
     @Override
     protected StringSet instantiateSet(List<String> keywords, boolean caseSensitive) {
-        StringSet s = new WholeWordMatchSet(keywords, caseSensitive);
+        WholeWordMatchSet s = new WholeWordMatchSet(keywords, caseSensitive);
         for (int i = 0; i < keywords.size(); i++) {
-            keywords.set(i, keywords.get(i).trim());
+            keywords.set(i, trim(keywords.get(i), s.getWordChars()));
         }
         return s;
+    }
+
+    private String trim(String keyword, boolean[] wordChars) {
+        // Trim any non-word chars from the start and the end.
+        int wordStart = 0;
+        int wordEnd = keyword.length();
+        for (int i = 0; i < keyword.length(); i++) {
+            if (wordChars[keyword.charAt(i)]) {
+                wordStart = i;
+                break;
+            }
+        }
+        for (int i = keyword.length() - 1; i >= 0; i--) {
+            if (wordChars[keyword.charAt(i)]) {
+                wordEnd = i + 1;
+                break;
+            }
+        }
+        // Don't substring if you don't have to.
+        if (wordStart != 0 || wordEnd != keyword.length()) {
+            keyword = keyword.substring(wordStart, wordEnd);
+        }
+        return keyword;
     }
 
 }
