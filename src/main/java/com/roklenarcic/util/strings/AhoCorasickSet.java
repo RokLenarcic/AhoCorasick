@@ -6,7 +6,7 @@ import java.util.Iterator;
 // Standard Aho-Corasick set
 // It matches all occurences of the strings in the set anywhere.
 // It is highly optimized for this particular use.
-class AhoCorasickSet implements StringSet {
+public class AhoCorasickSet implements StringSet {
 
     private boolean caseSensitive = true;
     private TrieNode root;
@@ -28,7 +28,7 @@ class AhoCorasickSet implements StringSet {
                 }
                 // Last node will contains the keyword as a match.
                 // Suffix matches will be added later.
-                currentNode.match = keyword;
+                currentNode.matchLength = keyword.length();
             }
         }
         // Go through nodes depth first, swap any hashmap nodes,
@@ -81,12 +81,12 @@ class AhoCorasickSet implements StringSet {
                     // "ab" has no match of its own, but it matches failure transition's
                     // match "b".
                     TrieNode fail = value.failTransition;
-                    while (fail != root && fail.match == null) {
+                    while (fail != root && fail.matchLength == 0) {
                         fail = fail.failTransition;
                     }
-                    if (fail.match != null) {
-                        if (value.match == null) {
-                            value.match = fail.match;
+                    if (fail.matchLength > 0) {
+                        if (value.matchLength == 0) {
+                            value.matchLength = fail.matchLength;
                             value.suffixMatch = fail.suffixMatch;
                         } else {
                             value.suffixMatch = fail;
@@ -365,7 +365,7 @@ class AhoCorasickSet implements StringSet {
             // Value of the first character
             this.baseChar = from;
             this.size = to - from + 1;
-            this.match = oldNode.match;
+            this.matchLength = oldNode.matchLength;
             // Avoid even allocating a children array if size is 0.
             if (size <= 0) {
                 size = 0;
@@ -419,7 +419,7 @@ class AhoCorasickSet implements StringSet {
 
         protected TrieNode defaultTransition = null;
         protected TrieNode failTransition;
-        protected String match;
+        protected int matchLength = 0;
         protected TrieNode suffixMatch;
 
         protected TrieNode(boolean root) {
@@ -443,11 +443,11 @@ class AhoCorasickSet implements StringSet {
             // since idx is the last character in the match
             // position it past the match (to be consistent with conventions)
             boolean ret = true;
-            if (match != null) {
-                ret = listener.match(match, idx);
+            if (matchLength > 0) {
+                ret = listener.match(idx - matchLength, idx);
                 TrieNode suffixMatch = this.suffixMatch;
                 while (suffixMatch != null && ret) {
-                    ret = listener.match(suffixMatch.match, idx);
+                    ret = listener.match(idx - suffixMatch.matchLength, idx);
                     suffixMatch = suffixMatch.suffixMatch;
                 }
             }

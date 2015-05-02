@@ -125,9 +125,9 @@ public abstract class SetTest {
         test("123 4x 1234 5x 1234 56 123 45 1x 345 12 34x 12 345x 123xb 1234 56s", "123", "123 45", "1234 56", "12 345");
     }
 
-    protected void assertCorrectMatch(final String word, final int endPosition, List<String> keywords, String haystack, StringSet set) {
-        Assert.assertTrue("Could not find needle " + word + " at end position " + endPosition + " in \n" + haystack,
-                keywords.contains(haystack.substring(endPosition - word.length(), endPosition)));
+    protected void assertCorrectMatch(final int startPosition, final int endPosition, List<String> keywords, String haystack, StringSet set) {
+        Assert.assertTrue("Could not find " + haystack.substring(startPosition, endPosition) + " at end position " + endPosition + " in keywords.",
+                keywords.contains(haystack.substring(startPosition, endPosition)));
     }
 
     protected abstract int getCorrectCount(List<String> keywords, String haystack, StringSet set);
@@ -151,16 +151,16 @@ public abstract class SetTest {
 
             int count = 0;
 
-            public boolean match(final String word, final int endPosition) {
+            public boolean match(final int startPosition, final int endPosition) {
                 count++;
-                assertCorrectMatch(word, endPosition, keywords, haystack, set);
+                assertCorrectMatch(startPosition, endPosition, keywords, haystack, set);
                 return true;
             }
         }
         final CountingMatchListener listener = new CountingMatchListener();
         final MatchListener performanceListener = new MatchListener() {
 
-            public boolean match(final String word, final int endPosition) {
+            public boolean match(final int startPosition, final int endPosition) {
                 return true;
             }
         };

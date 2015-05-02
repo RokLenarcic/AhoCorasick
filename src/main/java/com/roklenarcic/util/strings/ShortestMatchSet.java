@@ -26,13 +26,13 @@ class ShortestMatchSet implements StringSet {
                 HashmapNode currentNode = (HashmapNode) root;
                 for (int idx = 0; idx < keyword.length(); idx++) {
                     currentNode = currentNode.getOrAddChild(caseSensitive ? keyword.charAt(idx) : Character.toLowerCase(keyword.charAt(idx)));
-                    if (currentNode.match != null) {
+                    if (currentNode.matchLength != 0) {
                         continue OUTER;
                     }
                 }
                 // Last node will contains the keyword as a match.
                 // Suffix matches will be added later.
-                currentNode.match = keyword;
+                currentNode.matchLength = keyword.length();
             }
         }
         // Go through nodes depth first, swap any hashmap nodes,
@@ -79,17 +79,17 @@ class ShortestMatchSet implements StringSet {
                     } while (value.failTransition == null);
                     // Now that we have a fail transition, if this node has no match,
                     // find follow fail transitions to find a node that has match.
-                    if (value.match == null) {
+                    if (value.matchLength == 0) {
                         TrieNode fail = value.failTransition;
-                        while (fail != root && fail.match == null) {
+                        while (fail != root && fail.matchLength == 0) {
                             fail = fail.failTransition;
                         }
-                        value.match = fail.match;
+                        value.matchLength = fail.matchLength;
                     }
                     // If node has any kind of match (naturally or from fail transition),
                     // then no progression is possible, so clear all the transitions, also,
                     // make fail transition a root.
-                    if (value.match != null) {
+                    if (value.matchLength != 0) {
                         value.clear();
                         value.failTransition = root;
                     }
@@ -150,7 +150,7 @@ class ShortestMatchSet implements StringSet {
 
         // Start with the root node.
         TrieNode currentNode = root;
-        String currentNodeMatch = currentNode.match;
+        int currentNodeMatchLength = currentNode.matchLength;
 
         int idx = 0;
         // For each character.
@@ -160,10 +160,10 @@ class ShortestMatchSet implements StringSet {
         if (caseSensitive) {
             while (idx < len) {
                 final char c = haystack.charAt(idx);
-                if (currentNodeMatch != null) {
+                if (currentNodeMatchLength != 0) {
                     // Output any matches on the current node
                     // and jump to root, only leaf nodes have matches so next character won't match anything
-                    if (!listener.match(currentNodeMatch, idx)) {
+                    if (!listener.match(idx - currentNodeMatchLength, idx)) {
                         break;
                     }
                     currentNode = root.getTransition(c);
@@ -176,20 +176,20 @@ class ShortestMatchSet implements StringSet {
                     }
                     currentNode = nextNode;
                 }
-                currentNodeMatch = currentNode.match;
+                currentNodeMatchLength = currentNode.matchLength;
                 ++idx;
             }
-            if (currentNodeMatch != null) {
+            if (currentNodeMatchLength != 0) {
                 // Output any matches on the last node
-                listener.match(currentNodeMatch, idx);
+                listener.match(idx - currentNodeMatchLength, idx);
             }
         } else {
             while (idx < len) {
                 final char c = Character.toLowerCase(haystack.charAt(idx));
-                if (currentNodeMatch != null) {
+                if (currentNodeMatchLength != 0) {
                     // Output any matches on the current node
                     // and jump to root, only leaf nodes have matches so next character won't match anything
-                    if (!listener.match(currentNodeMatch, idx)) {
+                    if (!listener.match(idx - currentNodeMatchLength, idx)) {
                         break;
                     }
                     currentNode = root.getTransition(c);
@@ -202,12 +202,12 @@ class ShortestMatchSet implements StringSet {
                     }
                     currentNode = nextNode;
                 }
-                currentNodeMatch = currentNode.match;
+                currentNodeMatchLength = currentNode.matchLength;
                 ++idx;
             }
-            if (currentNodeMatch != null) {
+            if (currentNodeMatchLength != 0) {
                 // Output any matches on the last node
-                listener.match(currentNodeMatch, idx);
+                listener.match(idx - currentNodeMatchLength, idx);
             }
         }
     }
@@ -381,7 +381,7 @@ class ShortestMatchSet implements StringSet {
             // Value of the first character
             this.baseChar = from;
             this.size = to - from + 1;
-            this.match = oldNode.match;
+            this.matchLength = oldNode.matchLength;
             // Avoid even allocating a children array if size is 0.
             if (size <= 0) {
                 size = 0;
@@ -442,7 +442,7 @@ class ShortestMatchSet implements StringSet {
 
         protected TrieNode defaultTransition = null;
         protected TrieNode failTransition;
-        protected String match;
+        protected int matchLength;
 
         protected TrieNode(boolean root) {
             this.defaultTransition = root ? this : null;

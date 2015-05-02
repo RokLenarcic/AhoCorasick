@@ -28,7 +28,7 @@ class LongestMatchSet implements StringSet {
                 }
                 // Last node will contains the keyword as a match.
                 // Suffix matches will be added later.
-                currentNode.match = keyword;
+                currentNode.matchLength = keyword.length();
             }
         }
         // Go through nodes depth first, swap any hashmap nodes,
@@ -81,12 +81,12 @@ class LongestMatchSet implements StringSet {
                     // "ab" has no match of its own, but it matches failure transition's
                     // match "b".
                     TrieNode fail = value.failTransition;
-                    while (fail != root && fail.match == null) {
+                    while (fail != root && fail.matchLength == 0) {
                         fail = fail.failTransition;
                     }
-                    if (fail.match != null) {
-                        if (value.match == null) {
-                            value.match = fail.match;
+                    if (fail.matchLength != 0) {
+                        if (value.matchLength == 0) {
+                            value.matchLength = fail.matchLength;
                             value.suffixMatch = fail.suffixMatch;
                         } else {
                             value.suffixMatch = fail;
@@ -375,7 +375,7 @@ class LongestMatchSet implements StringSet {
             // Value of the first character
             this.baseChar = from;
             this.size = to - from + 1;
-            this.match = oldNode.match;
+            this.matchLength = oldNode.matchLength;
             // Avoid even allocating a children array if size is 0.
             if (size <= 0) {
                 size = 0;
@@ -430,7 +430,7 @@ class LongestMatchSet implements StringSet {
         protected TrieNode defaultTransition = null;
         protected TrieNode failTransition;
         protected int level = 0;
-        protected String match;
+        protected int matchLength = 0;
         protected TrieNode suffixMatch;
 
         protected TrieNode(boolean root, int level) {
@@ -459,11 +459,11 @@ class LongestMatchSet implements StringSet {
             // length, first match accepted into the queue means subsequent matches won't be,
             // so we return.
             boolean matchAccepted = false;
-            if (match != null) {
-                matchAccepted = queue.push(match, idx);
+            if (matchLength != 0) {
+                matchAccepted = queue.push(idx - matchLength, idx);
                 TrieNode suffixMatch = this.suffixMatch;
                 while (suffixMatch != null && !matchAccepted) {
-                    matchAccepted = queue.push(suffixMatch.match, idx);
+                    matchAccepted = queue.push(idx - suffixMatch.matchLength, idx);
                     suffixMatch = suffixMatch.suffixMatch;
                 }
             }

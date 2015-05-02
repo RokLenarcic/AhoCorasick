@@ -54,7 +54,7 @@ class FullStringMatchSet implements StringSet {
                     return;
                 }
             }
-            listener.match(haystack, len);
+            listener.match(0, len);
         } else {
             while (idx < len) {
                 // Try to transition from the current node using the character
@@ -63,7 +63,7 @@ class FullStringMatchSet implements StringSet {
                     return;
                 }
             }
-            listener.match(haystack, len);
+            listener.match(0, len);
         }
     }
 

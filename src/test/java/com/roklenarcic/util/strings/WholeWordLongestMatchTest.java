@@ -29,14 +29,16 @@ public class WholeWordLongestMatchTest extends SetTest {
     }
 
     @Override
-    protected void assertCorrectMatch(String word, int endPosition, List<String> keywords, String haystack, StringSet set) {
+    protected void assertCorrectMatch(int startPosition, int endPosition, List<String> keywords, String haystack, StringSet set) {
         WholeWordLongestMatchSet wwset = (WholeWordLongestMatchSet) set;
-        Assert.assertTrue("Could not find needle " + word + " at end position " + endPosition + " in \n" + haystack,
-                keywords.contains(haystack.substring(endPosition - word.length(), endPosition)));
-        Assert.assertTrue("Needle " + word + " at end position " + endPosition + " doesn't end in whitespace or string end in \n" + haystack,
+        Assert.assertTrue("Could not find needle " + haystack.substring(startPosition, endPosition) + " at end position " + endPosition + " in set.",
+                keywords.contains(haystack.substring(startPosition, endPosition)));
+        Assert.assertTrue("Needle " + haystack.substring(startPosition, endPosition) + " at end position " + endPosition
+                + " doesn't end in whitespace or string end in \n" + haystack,
                 haystack.length() == endPosition || !wwset.getWordChars()[haystack.charAt(endPosition)]);
-        Assert.assertTrue("Needle " + word + " at end position " + endPosition + " doesn't start in whitespace or string start in \n" + haystack,
-                0 == (endPosition - word.length()) || !wwset.getWordChars()[haystack.charAt(endPosition - word.length() - 1)]);
+        Assert.assertTrue("Needle " + haystack.substring(startPosition, endPosition) + " at end position " + endPosition
+                + " doesn't start in whitespace or string start in \n" + haystack,
+                startPosition == 0 || !wwset.getWordChars()[haystack.charAt(startPosition - 1)]);
     }
 
     @Override

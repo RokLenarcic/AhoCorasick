@@ -8,13 +8,13 @@ public class MatchQueueTest {
     @Test
     public void testMatchQueue() {
         MatchQueue q = new MatchQueue();
-        q.push("abc", 3);
-        q.push("cde", 6);
-        q.push("abc", 9);
-        q.push("abcdefghi", 10);
-        Listener l = new Listener(new int[] { 3, 6, 9, 10 }, new String[] { "abc", "cde", "abc", "abcdefg" });
+        q.push(3, 3);
+        q.push(3, 6);
+        q.push(3, 9);
+        q.push(9, 10);
+        Listener l = new Listener(new int[] { 3, 6, 9, 10 }, new int[] { 3, 3, 3, 7 });
         q.matchAndClear(l, 10);
-        q.push("abcdefg", 10);
+        q.push(7, 10);
         q.matchAndClear(l, 10);
         l.assertAllExpended();
     }
@@ -22,10 +22,10 @@ public class MatchQueueTest {
     @Test
     public void testMatchQueueExtendingOverlap() {
         MatchQueue q = new MatchQueue();
-        q.push("abc", 3);
-        q.push("abcd", 4);
-        q.push("de", 5);
-        Listener l = new Listener(new int[] { 4 }, new String[] { "abcd" });
+        q.push(3, 3);
+        q.push(4, 4);
+        q.push(2, 5);
+        Listener l = new Listener(new int[] { 4 }, new int[] { 4 });
         q.matchAndClear(l, 4);
         l.assertAllExpended();
     }
@@ -33,11 +33,11 @@ public class MatchQueueTest {
     @Test
     public void testMatchQueueSimple() {
         MatchQueue q = new MatchQueue();
-        q.push("abc", 3);
-        q.push("bc", 3);
-        q.push("bc", 4);
-        q.push("bc", 5);
-        Listener l = new Listener(new int[] { 3, 5 }, new String[] { "abc", "bc" });
+        q.push(3, 3);
+        q.push(2, 3);
+        q.push(2, 4);
+        q.push(2, 5);
+        Listener l = new Listener(new int[] { 3, 5 }, new int[] { 3, 2 });
         q.matchAndClear(l, 5);
         l.assertAllExpended();
     }
@@ -45,13 +45,13 @@ public class MatchQueueTest {
     @Test
     public void testPartialClear() {
         MatchQueue q = new MatchQueue();
-        q.push("abc", 3);
-        q.push("cde", 6);
-        q.push("abc", 9);
-        q.push("abcdefghi", 10);
-        Listener l = new Listener(new int[] { 3, 10 }, new String[] { "abc", "abcdefg" });
+        q.push(3, 3);
+        q.push(3, 6);
+        q.push(3, 9);
+        q.push(9, 10);
+        Listener l = new Listener(new int[] { 3, 10 }, new int[] { 3, 7 });
         q.matchAndClear(l, 4);
-        q.push("abcdefg", 10);
+        q.push(7, 10);
         q.matchAndClear(l, 10);
         l.assertAllExpended();
     }
@@ -60,21 +60,21 @@ public class MatchQueueTest {
 
         private int i = 0;
         private int[] indexes;
-        private String[] matches;
+        private int[] lengths;
 
-        public Listener(int[] indexes, String[] matches) {
+        public Listener(int[] indexes, int[] lengths) {
             super();
             this.indexes = indexes;
-            this.matches = matches;
+            this.lengths = lengths;
         }
 
         public void assertAllExpended() {
             Assert.assertEquals(indexes.length, i);
         }
 
-        public boolean match(String word, int endPosition) {
+        public boolean match(int startPosition, int endPosition) {
             Assert.assertEquals(indexes[i], endPosition);
-            Assert.assertEquals(matches[i], word);
+            Assert.assertEquals(lengths[i], endPosition - startPosition);
             i++;
             return true;
         }

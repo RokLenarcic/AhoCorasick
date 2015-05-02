@@ -65,18 +65,20 @@ class WholeWordLongestMatchSet implements StringSet {
                 if (nextNode == null) {
                     // Awkward if structure saves us a branch in the else statement.
                     if (!wordChars[c]) {
-                        if (currentNode.match != null) {
-                            if (!listener.match(currentNode.match, idx)) {
+                        if (currentNode.matchLength != 0) {
+                            if (!listener.match(idx - currentNode.matchLength, idx)) {
                                 return;
                             }
-                        } else if (currentNode.failMatch != null) {
-                            if (!listener.match(currentNode.failMatch, idx - currentNode.failMatchOffset)) {
+                        } else if (currentNode.failMatchLength != 0) {
+                            int failMatchEnd = idx - currentNode.failMatchOffset;
+                            if (!listener.match(failMatchEnd - currentNode.failMatchLength, failMatchEnd)) {
                                 return;
                             }
                         }
                     } else {
-                        if (currentNode.failMatch != null) {
-                            if (!listener.match(currentNode.failMatch, idx - currentNode.failMatchOffset)) {
+                        if (currentNode.failMatchLength != 0) {
+                            int failMatchEnd = idx - currentNode.failMatchOffset;
+                            if (!listener.match(failMatchEnd - currentNode.failMatchLength, failMatchEnd)) {
                                 return;
                             }
                         }
@@ -95,9 +97,9 @@ class WholeWordLongestMatchSet implements StringSet {
                     currentNode = nextNode;
                 }
             }
-            if (currentNode.match != null) {
+            if (currentNode.matchLength != 0) {
                 // Output any matches on the last node
-                listener.match(currentNode.match, idx);
+                listener.match(idx - currentNode.matchLength, idx);
             }
         } else {
             while (idx < len) {
@@ -106,28 +108,30 @@ class WholeWordLongestMatchSet implements StringSet {
                 if (nextNode == null) {
                     // Awkward if structure saves us a branch in the else statement.
                     if (!wordChars[c]) {
-                        if (currentNode.match != null) {
-                            if (!listener.match(currentNode.match, idx)) {
+                        if (currentNode.matchLength != 0) {
+                            if (!listener.match(idx - currentNode.matchLength, idx)) {
                                 return;
                             }
-                        } else if (currentNode.failMatch != null) {
-                            if (!listener.match(currentNode.failMatch, idx - currentNode.failMatchOffset)) {
+                        } else if (currentNode.failMatchLength != 0) {
+                            int failMatchEnd = idx - currentNode.failMatchOffset;
+                            if (!listener.match(failMatchEnd - currentNode.failMatchLength, failMatchEnd)) {
                                 return;
                             }
                         }
                     } else {
-                        if (currentNode.failMatch != null) {
-                            if (!listener.match(currentNode.failMatch, idx - currentNode.failMatchOffset)) {
+                        if (currentNode.failMatchLength != 0) {
+                            int failMatchEnd = idx - currentNode.failMatchOffset;
+                            if (!listener.match(failMatchEnd - currentNode.failMatchLength, failMatchEnd)) {
                                 return;
                             }
                         }
                         // Scroll to the first non-word character
-                        while (++idx < len && wordChars[haystack.charAt(idx)]) {
+                        while (++idx < len && wordChars[Character.toLowerCase(haystack.charAt(idx))]) {
                             ;
                         }
                     }
                     // Scroll to the first word character
-                    while (++idx < len && !wordChars[haystack.charAt(idx)]) {
+                    while (++idx < len && !wordChars[Character.toLowerCase(haystack.charAt(idx))]) {
                         ;
                     }
                     currentNode = root;
@@ -136,9 +140,9 @@ class WholeWordLongestMatchSet implements StringSet {
                     currentNode = nextNode;
                 }
             }
-            if (currentNode.match != null) {
+            if (currentNode.matchLength != 0) {
                 // Output any matches on the last node
-                listener.match(currentNode.match, idx);
+                listener.match(idx - currentNode.matchLength, idx);
             }
         }
     }
@@ -185,7 +189,7 @@ class WholeWordLongestMatchSet implements StringSet {
                     }
                     // Last node will contains the keyword as a match.
                     // Suffix matches will be added later.
-                    currentNode.match = keyword;
+                    currentNode.matchLength = keyword.length();
                 }
             }
         }
@@ -196,22 +200,22 @@ class WholeWordLongestMatchSet implements StringSet {
         // Fill the failMatchValues
         root.mapEntries(new EntryVisitor() {
 
-            private String failMatch = null;
+            private int failMatchLength = 0;
             private int failMatchOffset = 0;
 
             public void visit(TrieNode parent, char key, TrieNode value) {
-                String fm = failMatch;
+                int fm = failMatchLength;
                 int offset = failMatchOffset;
-                if (parent.match != null && !wordChars[key]) {
-                    failMatch = parent.match;
+                if (parent.matchLength != 0 && !wordChars[key]) {
+                    failMatchLength = parent.matchLength;
                     failMatchOffset = 1;
                 } else {
                     failMatchOffset++;
                 }
-                value.failMatch = failMatch;
+                value.failMatchLength = failMatchLength;
                 value.failMatchOffset = failMatchOffset;
                 value.mapEntries(this);
-                failMatch = fm;
+                failMatchLength = fm;
                 failMatchOffset = offset;
 
             }
@@ -383,7 +387,7 @@ class WholeWordLongestMatchSet implements StringSet {
             // Value of the first character
             this.baseChar = from;
             this.size = to - from + 1;
-            this.match = oldNode.match;
+            this.matchLength = oldNode.matchLength;
             // Avoid even allocating a children array if size is 0.
             if (size <= 0) {
                 size = 0;
@@ -437,9 +441,9 @@ class WholeWordLongestMatchSet implements StringSet {
     // Basic node for both
     private static abstract class TrieNode {
 
-        protected String failMatch;
-        protected int failMatchOffset;
-        protected String match;
+        protected int failMatchLength = 0;
+        protected int failMatchOffset = 0;
+        protected int matchLength = 0;
 
         public abstract void clear();
 

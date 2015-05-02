@@ -64,8 +64,8 @@ class WholeWordMatchSet implements StringSet {
                 TrieNode nextNode = currentNode.getTransition(c);
                 if (nextNode == null) {
                     if (!wordChars[c]) {
-                        if (currentNode.match != null) {
-                            if (!listener.match(currentNode.match, idx)) {
+                        if (currentNode.matchLength != 0) {
+                            if (!listener.match(idx - currentNode.matchLength, idx)) {
                                 return;
                             }
                         }
@@ -85,9 +85,9 @@ class WholeWordMatchSet implements StringSet {
                     currentNode = nextNode;
                 }
             }
-            if (currentNode.match != null) {
+            if (currentNode.matchLength != 0) {
                 // Output any matches on the last node
-                listener.match(currentNode.match, idx);
+                listener.match(idx - currentNode.matchLength, idx);
             }
         } else {
             while (idx < len) {
@@ -95,8 +95,8 @@ class WholeWordMatchSet implements StringSet {
                 TrieNode nextNode = currentNode.getTransition(c);
                 if (nextNode == null) {
                     if (!wordChars[c]) {
-                        if (currentNode.match != null) {
-                            if (!listener.match(currentNode.match, idx)) {
+                        if (currentNode.matchLength != 0) {
+                            if (!listener.match(idx - currentNode.matchLength, idx)) {
                                 return;
                             }
                         }
@@ -116,9 +116,9 @@ class WholeWordMatchSet implements StringSet {
                     currentNode = nextNode;
                 }
             }
-            if (currentNode.match != null) {
+            if (currentNode.matchLength != 0) {
                 // Output any matches on the last node
-                listener.match(currentNode.match, idx);
+                listener.match(idx - currentNode.matchLength, idx);
             }
         }
     }
@@ -171,7 +171,7 @@ class WholeWordMatchSet implements StringSet {
                     }
                     // Last node will contains the keyword as a match.
                     // Suffix matches will be added later.
-                    currentNode.match = keyword;
+                    currentNode.matchLength = keyword.length();
                 }
             }
         }
@@ -332,7 +332,7 @@ class WholeWordMatchSet implements StringSet {
             // Value of the first character
             this.baseChar = from;
             this.size = to - from + 1;
-            this.match = oldNode.match;
+            this.matchLength = oldNode.matchLength;
             // Avoid even allocating a children array if size is 0.
             if (size <= 0) {
                 size = 0;
@@ -375,7 +375,7 @@ class WholeWordMatchSet implements StringSet {
     // Basic node for both
     private static abstract class TrieNode {
 
-        protected String match;
+        protected int matchLength;
 
         public abstract void clear();
 
