@@ -1,5 +1,7 @@
 package com.roklenarcic.util.strings;
 
+import java.util.Iterator;
+
 // A set that matches only when one of the strings in the dictionary
 // matches the whole input string.
 // It is highly optimized for this particular use.
@@ -8,11 +10,12 @@ class FullStringMatchSet implements StringSet {
     private boolean caseSensitive = true;
     private TrieNode root;
 
-    public FullStringMatchSet(final Iterable<String> keywords, boolean caseSensitive) {
+    public FullStringMatchSet(final Iterator<String> keywords, boolean caseSensitive) {
         // Create the root node
         root = new HashmapNode();
         // Add all keywords
-        for (final String keyword : keywords) {
+        while (keywords.hasNext()) {
+            final String keyword = keywords.next();
             // Skip any empty keywords
             if (keyword != null && keyword.length() > 0) {
                 // Start with the current node and traverse the tree character by character.

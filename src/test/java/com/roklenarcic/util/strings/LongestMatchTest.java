@@ -43,7 +43,7 @@ public class LongestMatchTest extends SetTest {
 
     @Override
     protected StringSet instantiateSet(List<String> keywords, boolean caseSensitive) {
-        return new LongestMatchSet(keywords, caseSensitive);
+        return new LongestMatchSet(keywords.iterator(), caseSensitive);
     }
 
     @Override

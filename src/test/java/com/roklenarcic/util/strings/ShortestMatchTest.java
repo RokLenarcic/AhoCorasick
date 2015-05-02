@@ -43,7 +43,7 @@ public class ShortestMatchTest extends SetTest {
 
     @Override
     protected StringSet instantiateSet(List<String> keywords, boolean caseSensitive) {
-        return new ShortestMatchSet(keywords, caseSensitive);
+        return new ShortestMatchSet(keywords.iterator(), caseSensitive);
     }
 
     @Override

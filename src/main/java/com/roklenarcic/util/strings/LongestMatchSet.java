@@ -1,6 +1,7 @@
 package com.roklenarcic.util.strings;
 
 import java.util.Arrays;
+import java.util.Iterator;
 
 // Standard Aho-Corasick set
 // It matches all occurences of the strings in the set anywhere.
@@ -10,11 +11,12 @@ class LongestMatchSet implements StringSet {
     private boolean caseSensitive = true;
     private TrieNode root;
 
-    public LongestMatchSet(final Iterable<String> keywords, boolean caseSensitive) {
+    public LongestMatchSet(final Iterator<String> keywords, boolean caseSensitive) {
         // Create the root node
         root = new HashmapNode(true, 0);
         // Add all keywords
-        for (final String keyword : keywords) {
+        while (keywords.hasNext()) {
+            final String keyword = keywords.next();
             // Skip any empty keywords
             if (keyword != null && keyword.length() > 0) {
                 // Start with the current node and traverse the tree

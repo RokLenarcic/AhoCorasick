@@ -1,6 +1,7 @@
 package com.roklenarcic.util.strings;
 
 import java.util.Arrays;
+import java.util.Iterator;
 
 // Matches rightmost shortest matches. Useful when you want non-overlapping
 // matches with a string set that doesn't have strings that are prefix to other
@@ -11,11 +12,12 @@ class ShortestMatchSet implements StringSet {
     private boolean caseSensitive = true;
     private TrieNode root;
 
-    public ShortestMatchSet(final Iterable<String> keywords, boolean caseSensitive) {
+    public ShortestMatchSet(final Iterator<String> keywords, boolean caseSensitive) {
         // Create the root node
         root = new HashmapNode(true);
         // Add all keywords
-        OUTER: for (final String keyword : keywords) {
+        OUTER: while (keywords.hasNext()) {
+            final String keyword = keywords.next();
             // Skip any empty keywords
             if (keyword != null && keyword.length() > 0) {
                 // Start with the current node and traverse the tree

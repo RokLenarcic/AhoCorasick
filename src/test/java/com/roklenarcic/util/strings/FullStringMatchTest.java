@@ -38,7 +38,7 @@ public class FullStringMatchTest extends SetTest {
 
     @Override
     protected StringSet instantiateSet(List<String> keywords, boolean caseSensitive) {
-        return new FullStringMatchSet(keywords, caseSensitive);
+        return new FullStringMatchSet(keywords.iterator(), caseSensitive);
     }
 
 }

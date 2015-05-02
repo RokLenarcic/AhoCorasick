@@ -39,7 +39,7 @@ public class AhoCorasickTest extends SetTest {
 
     @Override
     protected StringSet instantiateSet(List<String> keywords, boolean caseSensitive) {
-        return new AhoCorasickSet(keywords, caseSensitive);
+        return new AhoCorasickSet(keywords.iterator(), caseSensitive);
     }
 
 }

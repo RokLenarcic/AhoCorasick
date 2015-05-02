@@ -47,7 +47,7 @@ public class WholeWordMatchTest extends SetTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void testKeywordsWithNWCRejection() {
-        new WholeWordMatchSet(Collections.singleton("A B"), true);
+        new WholeWordMatchSet(Collections.singleton("A B").iterator(), true);
     }
 
     @Override
@@ -89,7 +89,7 @@ public class WholeWordMatchTest extends SetTest {
 
     @Override
     protected StringSet instantiateSet(List<String> keywords, boolean caseSensitive) {
-        WholeWordMatchSet s = new WholeWordMatchSet(keywords, caseSensitive);
+        WholeWordMatchSet s = new WholeWordMatchSet(keywords.iterator(), caseSensitive);
         for (int i = 0; i < keywords.size(); i++) {
             keywords.set(i, trim(keywords.get(i), s.getWordChars()));
         }

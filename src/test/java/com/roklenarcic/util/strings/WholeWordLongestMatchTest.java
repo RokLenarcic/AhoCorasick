@@ -61,7 +61,7 @@ public class WholeWordLongestMatchTest extends SetTest {
 
     @Override
     protected StringSet instantiateSet(List<String> keywords, boolean caseSensitive) {
-        WholeWordLongestMatchSet s = new WholeWordLongestMatchSet(keywords, caseSensitive);
+        WholeWordLongestMatchSet s = new WholeWordLongestMatchSet(keywords.iterator(), caseSensitive);
         for (int i = 0; i < keywords.size(); i++) {
             keywords.set(i, trim(keywords.get(i), s.getWordChars()));
         }

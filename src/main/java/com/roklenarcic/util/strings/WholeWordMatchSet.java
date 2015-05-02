@@ -1,5 +1,7 @@
 package com.roklenarcic.util.strings;
 
+import java.util.Iterator;
+
 // Matches leftmost shortest whole word matches.
 class WholeWordMatchSet implements StringSet {
 
@@ -8,7 +10,7 @@ class WholeWordMatchSet implements StringSet {
     private boolean[] wordChars;
 
     // Set where digits and letters, '-' and '_' are considered word characters.
-    public WholeWordMatchSet(final Iterable<String> keywords, boolean caseSensitive) {
+    public WholeWordMatchSet(final Iterator<String> keywords, boolean caseSensitive) {
         boolean[] characterFlags = new boolean[65536];
         characterFlags['-'] = true;
         characterFlags['_'] = true;
@@ -21,7 +23,7 @@ class WholeWordMatchSet implements StringSet {
     }
 
     // Set where the characters in the given array are considered word characters
-    public WholeWordMatchSet(final Iterable<String> keywords, boolean caseSensitive, char[] wordCharacters) {
+    public WholeWordMatchSet(final Iterator<String> keywords, boolean caseSensitive, char[] wordCharacters) {
         boolean[] characterFlags = new boolean[65536];
         for (char c : wordCharacters) {
             characterFlags[c] = true;
@@ -31,7 +33,7 @@ class WholeWordMatchSet implements StringSet {
 
     // Set where digits and letters and '-' and '_' are considered word characters but modified by the two
     // given arrays
-    public WholeWordMatchSet(final Iterable<String> keywords, boolean caseSensitive, char[] wordCharacters, boolean[] enableCharacterFlags) {
+    public WholeWordMatchSet(final Iterator<String> keywords, boolean caseSensitive, char[] wordCharacters, boolean[] enableCharacterFlags) {
         boolean[] characterFlags = new boolean[65536];
         characterFlags['-'] = true;
         characterFlags['_'] = true;
@@ -125,12 +127,13 @@ class WholeWordMatchSet implements StringSet {
         return wordChars;
     }
 
-    private void init(final Iterable<String> keywords, boolean caseSensitive, boolean[] wordChars) {
+    private void init(final Iterator<String> keywords, boolean caseSensitive, boolean[] wordChars) {
         this.wordChars = wordChars;
         // Create the root node
         root = new HashmapNode();
         // Add all keywords
-        for (String keyword : keywords) {
+        while (keywords.hasNext()) {
+            String keyword = keywords.next();
             // Skip any empty keywords
             if (keyword != null) {
                 // Trim any non-word chars from the start and the end.
