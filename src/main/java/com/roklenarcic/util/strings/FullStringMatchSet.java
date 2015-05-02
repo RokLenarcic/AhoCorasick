@@ -54,7 +54,9 @@ class FullStringMatchSet implements StringSet {
                     return;
                 }
             }
-            listener.match(0, len);
+            if (currentNode.isEmpty()) {
+                listener.match(0, len);
+            }
         } else {
             while (idx < len) {
                 // Try to transition from the current node using the character
@@ -64,6 +66,9 @@ class FullStringMatchSet implements StringSet {
                 }
             }
             listener.match(0, len);
+            if (currentNode.isEmpty()) {
+                listener.match(0, len);
+            }
         }
     }
 
@@ -124,6 +129,11 @@ class FullStringMatchSet implements StringSet {
                 }
             } while (currentSlot != defaultSlot);
             return null;
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return numEntries == 0;
         }
 
         // Double the capacity of the node, calculate the new mask,
@@ -232,11 +242,18 @@ class FullStringMatchSet implements StringSet {
             return null;
         }
 
+        @Override
+        public boolean isEmpty() {
+            return size == 0;
+        }
+
     }
 
     // Basic node for both
     private static abstract class TrieNode {
         public abstract TrieNode getTransition(char c);
+
+        public abstract boolean isEmpty();
     }
 
 }

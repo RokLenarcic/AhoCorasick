@@ -460,10 +460,10 @@ class LongestMatchSet implements StringSet {
             // so we return.
             boolean matchAccepted = false;
             if (matchLength != 0) {
-                matchAccepted = queue.push(idx - matchLength, idx);
+                matchAccepted = queue.push(matchLength, idx);
                 TrieNode suffixMatch = this.suffixMatch;
                 while (suffixMatch != null && !matchAccepted) {
-                    matchAccepted = queue.push(idx - suffixMatch.matchLength, idx);
+                    matchAccepted = queue.push(suffixMatch.matchLength, idx);
                     suffixMatch = suffixMatch.suffixMatch;
                 }
             }

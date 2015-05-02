@@ -58,7 +58,7 @@ public class WholeWordMatchTest extends SetTest {
 
     @Override
     protected void assertCorrectMatch(int startPosition, int endPosition, List<String> keywords, String haystack, StringSet set) {
-        WholeWordLongestMatchSet wwset = (WholeWordLongestMatchSet) set;
+        WholeWordMatchSet wwset = (WholeWordMatchSet) set;
         Assert.assertTrue("Could not find needle " + haystack.substring(startPosition, endPosition) + " at end position " + endPosition + " in set.",
                 keywords.contains(haystack.substring(startPosition, endPosition)));
         Assert.assertTrue("Needle " + haystack.substring(startPosition, endPosition) + " at end position " + endPosition
