@@ -1,7 +1,7 @@
 package com.roklenarcic.util.strings;
 
 // This class is used in the longest non-overlapping matching.
-class MatchQueue {
+class SetMatchQueue {
     // It works like an arraylist that occasionally gets cleared at the front.
     // We don't bother downsizing it.
     private int emptySlotIdx = 0;

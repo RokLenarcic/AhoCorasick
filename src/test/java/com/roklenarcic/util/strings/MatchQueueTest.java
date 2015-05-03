@@ -7,7 +7,7 @@ public class MatchQueueTest {
 
     @Test
     public void testMatchQueue() {
-        MatchQueue q = new MatchQueue();
+        SetMatchQueue q = new SetMatchQueue();
         q.push(3, 3);
         q.push(3, 6);
         q.push(3, 9);
@@ -21,7 +21,7 @@ public class MatchQueueTest {
 
     @Test
     public void testMatchQueueExtendingOverlap() {
-        MatchQueue q = new MatchQueue();
+        SetMatchQueue q = new SetMatchQueue();
         q.push(3, 3);
         q.push(4, 4);
         q.push(2, 5);
@@ -32,7 +32,7 @@ public class MatchQueueTest {
 
     @Test
     public void testMatchQueueSimple() {
-        MatchQueue q = new MatchQueue();
+        SetMatchQueue q = new SetMatchQueue();
         q.push(3, 3);
         q.push(2, 3);
         q.push(2, 4);
@@ -44,7 +44,7 @@ public class MatchQueueTest {
 
     @Test
     public void testPartialClear() {
-        MatchQueue q = new MatchQueue();
+        SetMatchQueue q = new SetMatchQueue();
         q.push(3, 3);
         q.push(3, 6);
         q.push(3, 9);
