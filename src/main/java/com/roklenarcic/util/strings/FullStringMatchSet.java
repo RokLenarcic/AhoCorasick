@@ -8,6 +8,7 @@ import java.util.Iterator;
 // have a lot of same prefixes.
 public class FullStringMatchSet implements StringSet {
 
+    private static final RangeNode EMPTY_NODE = new RangeNode(null, '\uffff', '\u0000');
     private boolean caseSensitive = true;
     private TrieNode root;
 
@@ -95,7 +96,9 @@ public class FullStringMatchSet implements StringSet {
             // If difference between min and max key are small
             // or only slightly larger than number of entries, use a range node
             int keyIntervalSize = maxKey - minKey + 1;
-            if (keyIntervalSize <= 8 || (size > (keyIntervalSize) * 0.70)) {
+            if (keyIntervalSize <= 0) {
+                return EMPTY_NODE;
+            } else if (keyIntervalSize <= 8 || (size > (keyIntervalSize) * 0.70)) {
                 return new RangeNode(node, minKey, maxKey);
             }
         }
