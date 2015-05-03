@@ -4,8 +4,9 @@ import java.util.Iterator;
 
 // A set that matches only when one of the strings in the dictionary
 // matches the whole input string.
-// It is highly optimized for this particular use.
-class FullStringMatchSet implements StringSet {
+// Should take up less space than a hashset when the words in the set
+// have a lot of same prefixes.
+public class FullStringMatchSet implements StringSet {
 
     private boolean caseSensitive = true;
     private TrieNode root;
@@ -33,11 +34,9 @@ class FullStringMatchSet implements StringSet {
     }
 
     public void match(final String haystack, final MatchListener listener) {
-
         if (haystack.length() == 0) {
             return;
         }
-
         // Start with the root node.
         TrieNode currentNode = root;
 
@@ -54,6 +53,7 @@ class FullStringMatchSet implements StringSet {
                     return;
                 }
             }
+            // Only match if going through the haystack ends on a leaf node.
             if (currentNode.isEmpty()) {
                 listener.match(0, len);
             }
@@ -65,7 +65,7 @@ class FullStringMatchSet implements StringSet {
                     return;
                 }
             }
-            listener.match(0, len);
+            // Only match if going through the haystack ends on a leaf node.
             if (currentNode.isEmpty()) {
                 listener.match(0, len);
             }

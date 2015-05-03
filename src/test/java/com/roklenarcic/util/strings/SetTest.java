@@ -123,6 +123,7 @@ public abstract class SetTest {
         test("ax if", "as", "if", "as if");
         test("as in", "as", "if", "as if");
         test("123 4x 1234 5x 1234 56 123 45 1x 345 12 34x 12 345x 123xb 1234 56s", "123", "123 45", "1234 56", "12 345");
+        test("abc 12", "abc", "abc 123");
     }
 
     protected void assertCorrectMatch(final int startPosition, final int endPosition, List<String> keywords, String haystack, StringSet set) {

@@ -2,7 +2,9 @@ package com.roklenarcic.util.strings;
 
 import java.util.Iterator;
 
-// Matches leftmost shortest whole word matches.
+// A set that matches only whole word matches. Non-word characters are user defined (with a default).
+// Any non-word characters around input strings get trimmed. Non-word characters not allowed in the keywords
+// and they will produce an IllegalArgumentException.
 class WholeWordMatchSet implements StringSet {
 
     private boolean caseSensitive = true;
@@ -62,15 +64,21 @@ class WholeWordMatchSet implements StringSet {
             while (idx < len) {
                 char c = haystack.charAt(idx);
                 TrieNode nextNode = currentNode.getTransition(c);
+                // Regardless of the type of the character, we keep moving till we run into
+                // a situation where there's no transition available.
                 if (nextNode == null) {
                     if (!wordChars[c]) {
+                        // If we ran into no-transition scenario on non-word character we can
+                        // output the match on the current node if there is one.
+                        // Later we will run through non-word characters to the start of the next word.
                         if (currentNode.matchLength != 0) {
                             if (!listener.match(idx - currentNode.matchLength, idx)) {
                                 return;
                             }
                         }
                     } else {
-                        // Scroll to the first non-word character
+                        // If we ran into no-transition situation on a word character, we scroll through word
+                        // characters to a non-word character.
                         while (++idx < len && wordChars[haystack.charAt(idx)]) {
                             ;
                         }
@@ -93,15 +101,21 @@ class WholeWordMatchSet implements StringSet {
             while (idx < len) {
                 char c = Character.toLowerCase(haystack.charAt(idx));
                 TrieNode nextNode = currentNode.getTransition(c);
+                // Regardless of the type of the character, we keep moving till we run into
+                // a situation where there's no transition available.
                 if (nextNode == null) {
                     if (!wordChars[c]) {
+                        // If we ran into no-transition scenario on non-word character we can
+                        // output the match on the current node if there is one.
+                        // Later we will run through non-word characters to the start of the next word.
                         if (currentNode.matchLength != 0) {
                             if (!listener.match(idx - currentNode.matchLength, idx)) {
                                 return;
                             }
                         }
                     } else {
-                        // Scroll to the first non-word character
+                        // If we ran into no-transition situation on a word character, we scroll through word
+                        // characters to a non-word character.
                         while (++idx < len && wordChars[haystack.charAt(idx)]) {
                             ;
                         }

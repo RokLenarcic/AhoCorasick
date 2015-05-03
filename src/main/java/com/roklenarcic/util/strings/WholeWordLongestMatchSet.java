@@ -2,7 +2,8 @@ package com.roklenarcic.util.strings;
 
 import java.util.Iterator;
 
-// Matches leftmost shortest whole word matches.
+// A set that matches only whole word matches. Non-word characters are user defined (with a default).
+// Any non-word characters around input strings get trimmed. Non-word characters are allowed in the keywords.
 class WholeWordLongestMatchSet implements StringSet {
 
     private boolean caseSensitive = true;
@@ -49,6 +50,8 @@ class WholeWordLongestMatchSet implements StringSet {
     }
 
     public void match(final String haystack, final MatchListener listener) {
+        // Nodes contain fail matches, which is the last normal match up the tree before the current node
+        // match.
 
         // Start with the root node.
         TrieNode currentNode = root;
@@ -62,9 +65,15 @@ class WholeWordLongestMatchSet implements StringSet {
             while (idx < len) {
                 char c = haystack.charAt(idx);
                 TrieNode nextNode = currentNode.getTransition(c);
+                // Regardless of the type of the character, we keep moving till we run into
+                // a situation where there's no transition available.
                 if (nextNode == null) {
                     // Awkward if structure saves us a branch in the else statement.
                     if (!wordChars[c]) {
+                        // If we ran into no-transition scenario on non-word character we can
+                        // output the match on the current node if there is one, else we output
+                        // a fail match if there is one.
+                        // Later we will run through non-word characters to the start of the next word.
                         if (currentNode.matchLength != 0) {
                             if (!listener.match(idx - currentNode.matchLength, idx)) {
                                 return;
@@ -76,6 +85,8 @@ class WholeWordLongestMatchSet implements StringSet {
                             }
                         }
                     } else {
+                        // If we ran into no-transition situation on a word character, we output any
+                        // fail match on the node and scroll through word characters to a non-word character.
                         if (currentNode.failMatchLength != 0) {
                             int failMatchEnd = idx - currentNode.failMatchOffset;
                             if (!listener.match(failMatchEnd - currentNode.failMatchLength, failMatchEnd)) {
@@ -93,21 +104,35 @@ class WholeWordLongestMatchSet implements StringSet {
                     }
                     currentNode = root;
                 } else {
+                    // If we have transition just take it.
                     ++idx;
                     currentNode = nextNode;
                 }
             }
+            // Output any matches on the last node, either a normal match or fail match.
             if (currentNode.matchLength != 0) {
-                // Output any matches on the last node
-                listener.match(idx - currentNode.matchLength, idx);
+                if (!listener.match(idx - currentNode.matchLength, idx)) {
+                    return;
+                }
+            } else if (currentNode.failMatchLength != 0) {
+                int failMatchEnd = idx - currentNode.failMatchOffset;
+                if (!listener.match(failMatchEnd - currentNode.failMatchLength, failMatchEnd)) {
+                    return;
+                }
             }
         } else {
             while (idx < len) {
                 char c = Character.toLowerCase(haystack.charAt(idx));
                 TrieNode nextNode = currentNode.getTransition(c);
+                // Regardless of the type of the character, we keep moving till we run into
+                // a situation where there's no transition available.
                 if (nextNode == null) {
                     // Awkward if structure saves us a branch in the else statement.
                     if (!wordChars[c]) {
+                        // If we ran into no-transition scenario on non-word character we can
+                        // output the match on the current node if there is one, else we output
+                        // a fail match if there is one.
+                        // Later we will run through non-word characters to the start of the next word.
                         if (currentNode.matchLength != 0) {
                             if (!listener.match(idx - currentNode.matchLength, idx)) {
                                 return;
@@ -119,6 +144,8 @@ class WholeWordLongestMatchSet implements StringSet {
                             }
                         }
                     } else {
+                        // If we ran into no-transition situation on a word character, we output any
+                        // fail match on the node and scroll through word characters to a non-word character.
                         if (currentNode.failMatchLength != 0) {
                             int failMatchEnd = idx - currentNode.failMatchOffset;
                             if (!listener.match(failMatchEnd - currentNode.failMatchLength, failMatchEnd)) {
@@ -126,23 +153,31 @@ class WholeWordLongestMatchSet implements StringSet {
                             }
                         }
                         // Scroll to the first non-word character
-                        while (++idx < len && wordChars[Character.toLowerCase(haystack.charAt(idx))]) {
+                        while (++idx < len && wordChars[haystack.charAt(idx)]) {
                             ;
                         }
                     }
                     // Scroll to the first word character
-                    while (++idx < len && !wordChars[Character.toLowerCase(haystack.charAt(idx))]) {
+                    while (++idx < len && !wordChars[haystack.charAt(idx)]) {
                         ;
                     }
                     currentNode = root;
                 } else {
+                    // If we have transition just take it.
                     ++idx;
                     currentNode = nextNode;
                 }
             }
+            // Output any matches on the last node, either a normal match or fail match.
             if (currentNode.matchLength != 0) {
-                // Output any matches on the last node
-                listener.match(idx - currentNode.matchLength, idx);
+                if (!listener.match(idx - currentNode.matchLength, idx)) {
+                    return;
+                }
+            } else if (currentNode.failMatchLength != 0) {
+                int failMatchEnd = idx - currentNode.failMatchOffset;
+                if (!listener.match(failMatchEnd - currentNode.failMatchLength, failMatchEnd)) {
+                    return;
+                }
             }
         }
     }
@@ -197,15 +232,19 @@ class WholeWordLongestMatchSet implements StringSet {
         // whose size is close to the size of range of keys with
         // flat array based nodes.
         root = optimizeNodes(root);
-        // Fill the failMatchValues
+        // Fill the fail match variables. We do that by carrying the last match up the tree
+        // and increasing the offset.
         root.mapEntries(new EntryVisitor() {
 
             private int failMatchLength = 0;
             private int failMatchOffset = 0;
 
             public void visit(TrieNode parent, char key, TrieNode value) {
-                int fm = failMatchLength;
+                // We save the state so we can restore it later. It's a poor man's stack.
+                int length = failMatchLength;
                 int offset = failMatchOffset;
+                // If the 'parent' node has a match and the transition is a non-word character
+                // we carry that match as a fail match to children after that transition.
                 if (parent.matchLength != 0 && !wordChars[key]) {
                     failMatchLength = parent.matchLength;
                     failMatchOffset = 1;
@@ -215,7 +254,8 @@ class WholeWordLongestMatchSet implements StringSet {
                 value.failMatchLength = failMatchLength;
                 value.failMatchOffset = failMatchOffset;
                 value.mapEntries(this);
-                failMatchLength = fm;
+                // Reset the state before exiting.
+                failMatchLength = length;
                 failMatchOffset = offset;
 
             }

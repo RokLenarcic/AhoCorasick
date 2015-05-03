@@ -3,11 +3,9 @@ package com.roklenarcic.util.strings;
 import java.util.Arrays;
 import java.util.Iterator;
 
-// Matches rightmost shortest matches. Useful when you want non-overlapping
-// matches with a string set that doesn't have strings that are prefix to other
-// strings in the set.
-// It is highly optimized for this particular use.
-class ShortestMatchSet implements StringSet {
+// Matches leftmost shortest matches. Useful when you want non-overlapping
+// matches with a string set that doesn't have strings that are prefix to other strings in the set.
+public class ShortestMatchSet implements StringSet {
 
     private boolean caseSensitive = true;
     private TrieNode root;
@@ -26,6 +24,8 @@ class ShortestMatchSet implements StringSet {
                 HashmapNode currentNode = (HashmapNode) root;
                 for (int idx = 0; idx < keyword.length(); idx++) {
                     currentNode = currentNode.getOrAddChild(caseSensitive ? keyword.charAt(idx) : Character.toLowerCase(keyword.charAt(idx)));
+                    // If currentNode has a match go on to the next keyword, the current keyword won't ever
+                    // match, because there's a shorter one in the set.
                     if (currentNode.matchLength != 0) {
                         continue OUTER;
                     }
@@ -61,9 +61,11 @@ class ShortestMatchSet implements StringSet {
                 } else {
                     // Dig up the tree until you find a fail transition.
                     do {
-                        // suffix of parent + key = suffix of this node
-                        // parent -> char -> value
-                        // parentFail -> char -> valueFail
+                        // Suffix of a parent + transition character from parent to this
+                        // node is the suffix of this node.
+
+                        // parent ---char---> value
+                        // parentFail ----char----> valueFail
                         // e.g. "ab" -> c -> "abc"
                         // "b" -> c -> "bc"
                         final TrieNode matchContinuation = parentFail.getTransition(key);
@@ -106,8 +108,11 @@ class ShortestMatchSet implements StringSet {
             queue.pop().mapEntries(failTransAndOutputsVisitor);
         }
 
-        // Fill out ranged nodes depth first otherwise the filled out extra nodes
-        // get queued and you get an endless queue.
+        // Range nodes represent a range of transitions without all the transitions in the range being
+        // there. In case of hitting on an empty slot the logic in match loop runs down the fail transition
+        // chain to find a node with a transition for that char. Instead of wasting space on empty slots
+        // we can do that beforehand and add that transition to the node. We need to do that in depth first
+        // fashion, otherwise an endless loop can form.
         EntryVisitor fillOutRangeNodesVisitor = new EntryVisitor() {
 
             public void visit(TrieNode parent, char key, TrieNode value) {
@@ -147,6 +152,8 @@ class ShortestMatchSet implements StringSet {
     }
 
     public void match(final String haystack, final MatchListener listener) {
+        // This particualr match method is different from the other match functions in that
+        // the current node is lagging behind the character being examined by one position.
 
         // Start with the root node.
         TrieNode currentNode = root;
@@ -160,9 +167,12 @@ class ShortestMatchSet implements StringSet {
         if (caseSensitive) {
             while (idx < len) {
                 final char c = haystack.charAt(idx);
+                // The current node at this point is the node after the transition from the last loop
+                // iteration.
                 if (currentNodeMatchLength != 0) {
-                    // Output any matches on the current node
-                    // and jump to root, only leaf nodes have matches so next character won't match anything
+                    // If that node had a match output any matches on the node
+                    // and jump to root, only leaf nodes have matches so next character won't match anything,
+                    // so continue matching from the root.
                     if (!listener.match(idx - currentNodeMatchLength, idx)) {
                         break;
                     }
@@ -176,9 +186,12 @@ class ShortestMatchSet implements StringSet {
                     }
                     currentNode = nextNode;
                 }
+                // Save the node match.
                 currentNodeMatchLength = currentNode.matchLength;
                 ++idx;
             }
+            // Because we are lagging behind when outputting matches on the current nodes,
+            // we need to output a potential match after the loop.
             if (currentNodeMatchLength != 0) {
                 // Output any matches on the last node
                 listener.match(idx - currentNodeMatchLength, idx);
@@ -186,9 +199,12 @@ class ShortestMatchSet implements StringSet {
         } else {
             while (idx < len) {
                 final char c = Character.toLowerCase(haystack.charAt(idx));
+                // The current node at this point is the node after the transition from the last loop
+                // iteration.
                 if (currentNodeMatchLength != 0) {
-                    // Output any matches on the current node
-                    // and jump to root, only leaf nodes have matches so next character won't match anything
+                    // If that node had a match output any matches on the node
+                    // and jump to root, only leaf nodes have matches so next character won't match anything,
+                    // so continue matching from the root.
                     if (!listener.match(idx - currentNodeMatchLength, idx)) {
                         break;
                     }
@@ -202,9 +218,12 @@ class ShortestMatchSet implements StringSet {
                     }
                     currentNode = nextNode;
                 }
+                // Save the node match.
                 currentNodeMatchLength = currentNode.matchLength;
                 ++idx;
             }
+            // Because we are lagging behind when outputting matches on the current nodes,
+            // we need to output a potential match after the loop.
             if (currentNodeMatchLength != 0) {
                 // Output any matches on the last node
                 listener.match(idx - currentNodeMatchLength, idx);

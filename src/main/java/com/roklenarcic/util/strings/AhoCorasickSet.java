@@ -57,9 +57,11 @@ public class AhoCorasickSet implements StringSet {
                 } else {
                     // Dig up the tree until you find a fail transition.
                     do {
-                        // suffix of parent + key = suffix of this node
-                        // parent -> char -> value
-                        // parentFail -> char -> valueFail
+                        // Suffix of a parent + transition character from parent to this
+                        // node is the suffix of this node.
+
+                        // parent ---char---> value
+                        // parentFail ----char----> valueFail
                         // e.g. "ab" -> c -> "abc"
                         // "b" -> c -> "bc"
                         final TrieNode matchContinuation = parentFail.getTransition(key);
@@ -80,6 +82,17 @@ public class AhoCorasickSet implements StringSet {
                     // "abc" and also its failure transtion's matches ("bc", "c")
                     // "ab" has no match of its own, but it matches failure transition's
                     // match "b".
+
+                    // Fail transitions are basically a linked list, because of the recursive fashion in which
+                    // they are defined. But only some of them have matches on them. We want to skip those
+                    // that don't, that is why we have suffix match references, which form a similar linked
+                    // list like fail transitions but they skip over those without matches. Since the suffix
+                    // matches for shorter suffixes have been sorted out, it's only a matter of linking to the
+                    // first fail transition with a match. But there is another thing we want. We want to
+                    // avoid the case where a node is without a match but it has suffix matches, as that would
+                    // introduce another if. That is why in case of nodes without matches we store the suffix
+                    // match directly on the node and instead link the next suffix match as this node's suffix
+                    // match.
                     TrieNode fail = value.failTransition;
                     while (fail != root && fail.matchLength == 0) {
                         fail = fail.failTransition;
@@ -104,8 +117,11 @@ public class AhoCorasickSet implements StringSet {
         while (!queue.isEmpty()) {
             queue.pop().mapEntries(failTransAndOutputsVisitor);
         }
-        // Fill out ranged nodes depth first otherwise the filled out extra nodes
-        // get queued and you get an endless queue.
+        // Range nodes represent a range of transitions without all the transitions in the range being
+        // there. In case of hitting on an empty slot the logic in match loop runs down the fail transition
+        // chain to find a node with a transition for that char. Instead of wasting space on empty slots
+        // we can do that beforehand and add that transition to the node. We need to do that in depth first
+        // fashion, otherwise an endless loop can form.
         EntryVisitor fillOutRangeNodesVisitor = new EntryVisitor() {
 
             public void visit(TrieNode parent, char key, TrieNode value) {
@@ -286,7 +302,7 @@ public class AhoCorasickSet implements StringSet {
         }
 
         // Double the capacity of the node, calculate the new mask,
-        // rehash and reinsert the entries
+        // rehash and reinsert the entries.
         private void enlarge() {
             char[] biggerKeys = new char[keys.length * 2];
             TrieNode[] biggerChildren = new TrieNode[children.length * 2];
@@ -372,6 +388,9 @@ public class AhoCorasickSet implements StringSet {
             } else {
                 this.children = new TrieNode[size];
                 // If original node is root node, prefill everything with yourself.
+                // This is done to allow the "fillRangeNodeVisitor" to work correctly
+                // on the root node, which would otherwise return null on empty slots,
+                // and cause a NPE.
                 if (oldNode.defaultTransition != null) {
                     Arrays.fill(children, this);
                 }

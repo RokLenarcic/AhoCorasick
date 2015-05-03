@@ -3,10 +3,9 @@ package com.roklenarcic.util.strings;
 import java.util.Arrays;
 import java.util.Iterator;
 
-// Standard Aho-Corasick set
-// It matches all occurences of the strings in the set anywhere.
-// It is highly optimized for this particular use.
-class LongestMatchSet implements StringSet {
+// Matches leftmost longest matches. Useful when you want non-overlapping
+// matches with a string set that doesn't have strings that are prefix to other strings in the set.
+public class LongestMatchSet implements StringSet {
 
     private boolean caseSensitive = true;
     private TrieNode root;
@@ -57,9 +56,11 @@ class LongestMatchSet implements StringSet {
                 } else {
                     // Dig up the tree until you find a fail transition.
                     do {
-                        // suffix of parent + key = suffix of this node
-                        // parent -> char -> value
-                        // parentFail -> char -> valueFail
+                        // Suffix of a parent + transition character from parent to this
+                        // node is the suffix of this node.
+
+                        // parent ---char---> value
+                        // parentFail ----char----> valueFail
                         // e.g. "ab" -> c -> "abc"
                         // "b" -> c -> "bc"
                         final TrieNode matchContinuation = parentFail.getTransition(key);
@@ -80,6 +81,17 @@ class LongestMatchSet implements StringSet {
                     // "abc" and also its failure transtion's matches ("bc", "c")
                     // "ab" has no match of its own, but it matches failure transition's
                     // match "b".
+
+                    // Fail transitions are basically a linked list, because of the recursive fashion in which
+                    // they are defined. But only some of them have matches on them. We want to skip those
+                    // that don't, that is why we have suffix match references, which form a similar linked
+                    // list like fail transitions but they skip over those without matches. Since the suffix
+                    // matches for shorter suffixes have been sorted out, it's only a matter of linking to the
+                    // first fail transition with a match. But there is another thing we want. We want to
+                    // avoid the case where a node is without a match but it has suffix matches, as that would
+                    // introduce another if. That is why in case of nodes without matches we store the suffix
+                    // match directly on the node and instead link the next suffix match as this node's suffix
+                    // match.
                     TrieNode fail = value.failTransition;
                     while (fail != root && fail.matchLength == 0) {
                         fail = fail.failTransition;
@@ -104,8 +116,11 @@ class LongestMatchSet implements StringSet {
         while (!queue.isEmpty()) {
             queue.pop().mapEntries(failTransAndOutputsVisitor);
         }
-        // Fill out ranged nodes depth first otherwise the filled out extra nodes
-        // get queued and you get an endless queue.
+        // Range nodes represent a range of transitions without all the transitions in the range being
+        // there. In case of hitting on an empty slot the logic in match loop runs down the fail transition
+        // chain to find a node with a transition for that char. Instead of wasting space on empty slots
+        // we can do that beforehand and add that transition to the node. We need to do that in depth first
+        // fashion, otherwise an endless loop can form.
         EntryVisitor fillOutRangeNodesVisitor = new EntryVisitor() {
 
             public void visit(TrieNode parent, char key, TrieNode value) {
@@ -175,12 +190,14 @@ class LongestMatchSet implements StringSet {
                 // Take the transition.
                 currentNode = nextNode;
                 // Output any matches on the current node
-                ++idx;
-                currentNode.output(queue, idx);
+                currentNode.output(queue, ++idx);
+                // If fail transition was taken, we can flush the match queue.
+                // We flush all matches that end before the start of the of the fail transition taken.
                 if (failTransition && !queue.matchAndClear(listener, idx - currentNode.level)) {
                     return;
                 }
             }
+            // Flush the rest of the matches.
             queue.matchAndClear(listener, Integer.MAX_VALUE);
         } else {
             while (idx < len) {
@@ -204,12 +221,14 @@ class LongestMatchSet implements StringSet {
                 // Take the transition.
                 currentNode = nextNode;
                 // Output any matches on the current node
-                ++idx;
-                currentNode.output(queue, idx);
+                currentNode.output(queue, ++idx);
+                // If fail transition was taken, we can flush the match queue.
+                // We flush all matches that end before the start of the of the fail transition taken.
                 if (failTransition && !queue.matchAndClear(listener, idx - currentNode.level)) {
                     return;
                 }
             }
+            // Flush the rest of the matches.
             queue.matchAndClear(listener, Integer.MAX_VALUE);
         }
     }
@@ -429,6 +448,7 @@ class LongestMatchSet implements StringSet {
 
         protected TrieNode defaultTransition = null;
         protected TrieNode failTransition;
+        // Depth of the node
         protected int level = 0;
         protected int matchLength = 0;
         protected TrieNode suffixMatch;
@@ -452,7 +472,7 @@ class LongestMatchSet implements StringSet {
 
         // Report matches at this node. Use at matching.
         public final void output(MatchQueue queue, int idx) {
-            // since idx is the last character in the match
+            // Since idx is the last character in the match
             // position it past the match (to be consistent with conventions)
 
             // Since all matches at one node are overlapping suffix matches in descending
