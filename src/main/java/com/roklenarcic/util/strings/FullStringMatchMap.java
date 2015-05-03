@@ -11,12 +11,13 @@ public class FullStringMatchMap<T> implements StringMap<T> {
     private boolean caseSensitive = true;
     private TrieNode<T> root;
 
-    public FullStringMatchMap(final Iterator<String> keywords, final Iterator<T> values, boolean caseSensitive) {
+    public FullStringMatchMap(final Iterator<String> keywords, final Iterator<? extends T> values, boolean caseSensitive) {
         // Create the root node
         root = new HashmapNode<T>();
         // Add all keywords
         while (keywords.hasNext() && values.hasNext()) {
             final String keyword = keywords.next();
+            T value = values.next();
             // Skip any empty keywords
             if (keyword != null && keyword.length() > 0) {
                 // Start with the current node and traverse the tree character by character.
@@ -25,7 +26,7 @@ public class FullStringMatchMap<T> implements StringMap<T> {
                 for (int idx = 0; idx < keyword.length(); idx++) {
                     currentNode = currentNode.getOrAddChild(caseSensitive ? keyword.charAt(idx) : Character.toLowerCase(keyword.charAt(idx)));
                 }
-                currentNode.value = values.next();
+                currentNode.value = value;
             }
         }
         // Go through nodes depth first, swap any hashmap nodes,

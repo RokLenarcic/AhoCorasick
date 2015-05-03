@@ -10,12 +10,13 @@ public class LongestMatchMap<T> implements StringMap<T> {
     private boolean caseSensitive = true;
     private TrieNode<T> root;
 
-    public LongestMatchMap(final Iterator<String> keywords, final Iterator<T> values, boolean caseSensitive) {
+    public LongestMatchMap(final Iterator<String> keywords, final Iterator<? extends T> values, boolean caseSensitive) {
         // Create the root node
         root = new HashmapNode<T>(true, 0);
         // Add all keywords
         while (keywords.hasNext() && values.hasNext()) {
             final String keyword = keywords.next();
+            T value = values.next();
             // Skip any empty keywords
             if (keyword != null && keyword.length() > 0) {
                 // Start with the current node and traverse the tree
@@ -28,7 +29,7 @@ public class LongestMatchMap<T> implements StringMap<T> {
                 // Last node will contains the keyword as a match.
                 // Suffix matches will be added later.
                 currentNode.matchLength = keyword.length();
-                currentNode.value = values.next();
+                currentNode.value = value;
             }
         }
         // Go through nodes depth first, swap any hashmap nodes,

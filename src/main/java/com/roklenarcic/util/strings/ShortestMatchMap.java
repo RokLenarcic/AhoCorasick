@@ -3,19 +3,18 @@ package com.roklenarcic.util.strings;
 import java.util.Arrays;
 import java.util.Iterator;
 
-// Standard Aho-Corasick map
-// It matches all occurences of the strings in the map anywhere.
-// It is highly optimized for this particular use.
-public class AhoCorasickMap<T> implements StringMap<T> {
+// Matches leftmost shortest matches. Useful when you want non-overlapping
+// matches with a string set that doesn't have strings that are prefix to other strings in the set.
+public class ShortestMatchMap<T> implements StringMap<T> {
 
     private boolean caseSensitive = true;
     private TrieNode<T> root;
 
-    public AhoCorasickMap(final Iterator<String> keywords, final Iterator<? extends T> values, boolean caseSensitive) {
+    public ShortestMatchMap(final Iterator<String> keywords, final Iterator<? extends T> values, boolean caseSensitive) {
         // Create the root node
         root = new HashmapNode<T>(true);
         // Add all keywords
-        while (keywords.hasNext() && values.hasNext()) {
+        OUTER: while (keywords.hasNext() && values.hasNext()) {
             final String keyword = keywords.next();
             T value = values.next();
             // Skip any empty keywords
@@ -26,6 +25,11 @@ public class AhoCorasickMap<T> implements StringMap<T> {
                 HashmapNode<T> currentNode = (HashmapNode<T>) root;
                 for (int idx = 0; idx < keyword.length(); idx++) {
                     currentNode = currentNode.getOrAddChild(caseSensitive ? keyword.charAt(idx) : Character.toLowerCase(keyword.charAt(idx)));
+                    // If currentNode has a match go on to the next keyword, the current keyword won't ever
+                    // match, because there's a shorter one in the set.
+                    if (currentNode.matchLength != 0) {
+                        continue OUTER;
+                    }
                 }
                 // Last node will contains the keyword as a match.
                 // Suffix matches will be added later.
@@ -77,36 +81,22 @@ public class AhoCorasickMap<T> implements StringMap<T> {
                             parentFail = parentFail.getFailTransition();
                         }
                     } while (value.failTransition == null);
-                    // Now that we have a fail transition, this node matches all
-                    // the matches of it's failTransition node in addition to any
-                    // match it already has.
-                    // e.g for keywords "abc", "bc", "c", "b", the "abc" node matches
-                    // "abc" and also its failure transtion's matches ("bc", "c")
-                    // "ab" has no match of its own, but it matches failure transition's
-                    // match "b".
-
-                    // Fail transitions are basically a linked list, because of the recursive fashion in which
-                    // they are defined. But only some of them have matches on them. We want to skip those
-                    // that don't, that is why we have suffix match references, which form a similar linked
-                    // list like fail transitions but they skip over those without matches. Since the suffix
-                    // matches for shorter suffixes have been sorted out, it's only a matter of linking to the
-                    // first fail transition with a match. But there is another thing we want. We want to
-                    // avoid the case where a node is without a match but it has suffix matches, as that would
-                    // introduce another if. That is why in case of nodes without matches we store the suffix
-                    // match directly on the node and instead link the next suffix match as this node's suffix
-                    // match.
-                    TrieNode<T> fail = value.failTransition;
-                    while (fail != root && fail.matchLength == 0) {
-                        fail = fail.failTransition;
-                    }
-                    if (fail.matchLength > 0) {
-                        if (value.matchLength == 0) {
-                            value.matchLength = fail.matchLength;
-                            value.suffixMatch = fail.suffixMatch;
-                            value.value = fail.value;
-                        } else {
-                            value.suffixMatch = fail;
+                    // Now that we have a fail transition, if this node has no match,
+                    // find follow fail transitions to find a node that has match.
+                    if (value.matchLength == 0) {
+                        TrieNode<T> fail = value.failTransition;
+                        while (fail != root && fail.matchLength == 0) {
+                            fail = fail.failTransition;
                         }
+                        value.matchLength = fail.matchLength;
+                        value.value = fail.value;
+                    }
+                    // If node has any kind of match (naturally or from fail transition),
+                    // then no progression is possible, so clear all the transitions, also,
+                    // make fail transition a root.
+                    if (value.matchLength != 0) {
+                        value.clear();
+                        value.failTransition = root;
                     }
                 }
                 // Queue the non-leaf node.
@@ -120,6 +110,7 @@ public class AhoCorasickMap<T> implements StringMap<T> {
         while (!queue.isEmpty()) {
             queue.pop().mapEntries(failTransAndOutputsVisitor);
         }
+
         // Range nodes represent a range of transitions without all the transitions in the range being
         // there. In case of hitting on an empty slot the logic in match loop runs down the fail transition
         // chain to find a node with a transition for that char. Instead of wasting space on empty slots
@@ -160,13 +151,17 @@ public class AhoCorasickMap<T> implements StringMap<T> {
 
         };
         root.mapEntries(fillOutRangeNodesVisitor);
+
     }
 
     public void match(final String haystack, final MapMatchListener<T> listener) {
+        // This particualr match method is different from the other match functions in that
+        // the current node is lagging behind the character being examined by one position.
 
         // Start with the root node.
         TrieNode<T> currentNode = root;
-
+        int currentNodeMatchLength = currentNode.matchLength;
+        T currentNodeMatchValue = currentNode.value;
         int idx = 0;
         // For each character.
         final int len = haystack.length();
@@ -175,50 +170,68 @@ public class AhoCorasickMap<T> implements StringMap<T> {
         if (caseSensitive) {
             while (idx < len) {
                 final char c = haystack.charAt(idx);
-                // Try to transition from the current node using the character
-                TrieNode<T> nextNode = currentNode.getTransition(c);
-
-                // If cannot transition, follow the fail transition until finding
-                // node X where you can transition to another node Y using this
-                // character. Take the transition.
-                while (nextNode == null) {
-                    // Transition follow one fail transition
-                    currentNode = currentNode.getFailTransition();
-                    // See if you can transition to another node with this
-                    // character. Note that root node will return itself for any
-                    // missing transition.
-                    nextNode = currentNode.getTransition(c);
+                // The current node at this point is the node after the transition from the last loop
+                // iteration.
+                if (currentNodeMatchLength != 0) {
+                    // If that node had a match output any matches on the node
+                    // and jump to root, only leaf nodes have matches so next character won't match anything,
+                    // so continue matching from the root.
+                    if (!listener.match(idx - currentNodeMatchLength, idx, currentNodeMatchValue)) {
+                        break;
+                    }
+                    currentNode = root.getTransition(c);
+                } else {
+                    // Try to transition from the current node using the character
+                    TrieNode<T> nextNode = currentNode.getTransition(c);
+                    while (nextNode == null) {
+                        currentNode = currentNode.failTransition;
+                        nextNode = currentNode.getTransition(c);
+                    }
+                    currentNode = nextNode;
                 }
-                // Take the transition.
-                currentNode = nextNode;
-                // Output any matches on the current node and increase the index
-                if (!currentNode.output(listener, ++idx)) {
-                    break;
-                }
+                // Save the node match.
+                currentNodeMatchLength = currentNode.matchLength;
+                currentNodeMatchValue = currentNode.value;
+                ++idx;
+            }
+            // Because we are lagging behind when outputting matches on the current nodes,
+            // we need to output a potential match after the loop.
+            if (currentNodeMatchLength != 0) {
+                // Output any matches on the last node
+                listener.match(idx - currentNodeMatchLength, idx, currentNodeMatchValue);
             }
         } else {
             while (idx < len) {
                 final char c = Character.toLowerCase(haystack.charAt(idx));
-                // Try to transition from the current node using the character
-                TrieNode<T> nextNode = currentNode.getTransition(c);
-
-                // If cannot transition, follow the fail transition until finding
-                // node X where you can transition to another node Y using this
-                // character. Take the transition.
-                while (nextNode == null) {
-                    // Transition follow one fail transition
-                    currentNode = currentNode.getFailTransition();
-                    // See if you can transition to another node with this
-                    // character. Note that root node will return itself for any
-                    // missing transition.
-                    nextNode = currentNode.getTransition(c);
+                // The current node at this point is the node after the transition from the last loop
+                // iteration.
+                if (currentNodeMatchLength != 0) {
+                    // If that node had a match output any matches on the node
+                    // and jump to root, only leaf nodes have matches so next character won't match anything,
+                    // so continue matching from the root.
+                    if (!listener.match(idx - currentNodeMatchLength, idx, currentNodeMatchValue)) {
+                        break;
+                    }
+                    currentNode = root.getTransition(c);
+                } else {
+                    // Try to transition from the current node using the character
+                    TrieNode<T> nextNode = currentNode.getTransition(c);
+                    while (nextNode == null) {
+                        currentNode = currentNode.failTransition;
+                        nextNode = currentNode.getTransition(c);
+                    }
+                    currentNode = nextNode;
                 }
-                // Take the transition.
-                currentNode = nextNode;
-                // Output any matches on the current node and increase the index
-                if (!currentNode.output(listener, ++idx)) {
-                    break;
-                }
+                // Save the node match.
+                currentNodeMatchLength = currentNode.matchLength;
+                currentNodeMatchValue = currentNode.value;
+                ++idx;
+            }
+            // Because we are lagging behind when outputting matches on the current nodes,
+            // we need to output a potential match after the loop.
+            if (currentNodeMatchLength != 0) {
+                // Output any matches on the last node
+                listener.match(idx - currentNodeMatchLength, idx, currentNodeMatchValue);
             }
         }
     }
@@ -274,6 +287,15 @@ public class AhoCorasickMap<T> implements StringMap<T> {
             super(root);
         }
 
+        @SuppressWarnings("unchecked")
+        @Override
+        public void clear() {
+            children = new TrieNode[1];
+            keys = new char[1];
+            modulusMask = keys.length - 1;
+            numEntries = 0;
+        }
+
         @Override
         public TrieNode<T> getTransition(final char key) {
             int defaultSlot = hash(key) & modulusMask;
@@ -306,7 +328,7 @@ public class AhoCorasickMap<T> implements StringMap<T> {
         }
 
         // Double the capacity of the node, calculate the new mask,
-        // rehash and reinsert the entries.
+        // rehash and reinsert the entries
         private void enlarge() {
             char[] biggerKeys = new char[keys.length * 2];
             @SuppressWarnings("unchecked")
@@ -386,8 +408,8 @@ public class AhoCorasickMap<T> implements StringMap<T> {
             super(oldNode.defaultTransition != null);
             // Value of the first character
             this.baseChar = from;
-            this.value = oldNode.value;
             this.size = to - from + 1;
+            this.value = oldNode.value;
             this.matchLength = oldNode.matchLength;
             // Avoid even allocating a children array if size is 0.
             if (size <= 0) {
@@ -395,9 +417,6 @@ public class AhoCorasickMap<T> implements StringMap<T> {
             } else {
                 this.children = new TrieNode[size];
                 // If original node is root node, prefill everything with yourself.
-                // This is done to allow the "fillRangeNodeVisitor" to work correctly
-                // on the root node, which would otherwise return null on empty slots,
-                // and cause a NPE.
                 if (oldNode.defaultTransition != null) {
                     Arrays.fill(children, this);
                 }
@@ -408,6 +427,13 @@ public class AhoCorasickMap<T> implements StringMap<T> {
                     }
                 }
             }
+        }
+
+        @Override
+        public void clear() {
+            children = null;
+            size = 0;
+
         }
 
         @Override
@@ -445,13 +471,14 @@ public class AhoCorasickMap<T> implements StringMap<T> {
 
         protected TrieNode<T> defaultTransition = null;
         protected TrieNode<T> failTransition;
-        protected int matchLength = 0;
-        protected TrieNode<T> suffixMatch;
-        protected T value = null;
+        protected int matchLength;
+        protected T value;
 
         protected TrieNode(boolean root) {
             this.defaultTransition = root ? this : null;
         }
+
+        public abstract void clear();
 
         // Get fail transition
         public final TrieNode<T> getFailTransition() {
@@ -465,21 +492,6 @@ public class AhoCorasickMap<T> implements StringMap<T> {
 
         public abstract void mapEntries(final EntryVisitor<T> visitor);
 
-        // Report matches at this node. Use at matching.
-        public final boolean output(MapMatchListener<T> listener, int idx) {
-            // since idx is the last character in the match
-            // position it past the match (to be consistent with conventions)
-            boolean ret = true;
-            if (matchLength > 0) {
-                ret = listener.match(idx - matchLength, idx, value);
-                TrieNode<T> suffixMatch = this.suffixMatch;
-                while (suffixMatch != null && ret) {
-                    ret = listener.match(idx - suffixMatch.matchLength, idx, suffixMatch.value);
-                    suffixMatch = suffixMatch.suffixMatch;
-                }
-            }
-            return ret;
-        }
     }
 
 }
