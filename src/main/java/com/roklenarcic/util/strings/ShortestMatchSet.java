@@ -151,7 +151,7 @@ public class ShortestMatchSet implements StringSet {
 
     }
 
-    public void match(final String haystack, final MatchListener listener) {
+    public void match(final String haystack, final SetMatchListener listener) {
         // This particualr match method is different from the other match functions in that
         // the current node is lagging behind the character being examined by one position.
 

@@ -16,7 +16,7 @@ class MatchQueue {
         return emptySlotIdx == 0;
     }
 
-    public boolean matchAndClear(MatchListener listener, int purgeToIndex) {
+    public boolean matchAndClear(SetMatchListener listener, int purgeToIndex) {
         // Start at the start of the array and flush to listener all matches which have
         // end index lower of equal than the purgeToIndex, then clear them out from array by
         // moving the rest of the matches to front.

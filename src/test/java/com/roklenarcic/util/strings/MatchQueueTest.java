@@ -56,7 +56,7 @@ public class MatchQueueTest {
         l.assertAllExpended();
     }
 
-    private static class Listener implements MatchListener {
+    private static class Listener implements SetMatchListener {
 
         private int i = 0;
         private int[] indexes;

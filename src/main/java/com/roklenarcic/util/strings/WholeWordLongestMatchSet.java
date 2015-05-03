@@ -49,7 +49,7 @@ class WholeWordLongestMatchSet implements StringSet {
         init(keywords, caseSensitive, characterFlags);
     }
 
-    public void match(final String haystack, final MatchListener listener) {
+    public void match(final String haystack, final SetMatchListener listener) {
         // Nodes contain fail matches, which is the last normal match up the tree before the current node
         // match.
 

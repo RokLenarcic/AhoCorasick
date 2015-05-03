@@ -33,7 +33,7 @@ public class FullStringMatchSet implements StringSet {
         root = optimizeNodes(root);
     }
 
-    public void match(final String haystack, final MatchListener listener) {
+    public void match(final String haystack, final SetMatchListener listener) {
         if (haystack.length() == 0) {
             return;
         }

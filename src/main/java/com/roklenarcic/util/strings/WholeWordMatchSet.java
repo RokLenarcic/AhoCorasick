@@ -50,7 +50,7 @@ class WholeWordMatchSet implements StringSet {
         init(keywords, caseSensitive, characterFlags);
     }
 
-    public void match(final String haystack, final MatchListener listener) {
+    public void match(final String haystack, final SetMatchListener listener) {
 
         // Start with the root node.
         TrieNode currentNode = root;

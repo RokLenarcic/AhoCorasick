@@ -148,7 +148,7 @@ public abstract class SetTest {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        class CountingMatchListener implements MatchListener {
+        class CountingMatchListener implements SetMatchListener {
 
             int count = 0;
 
@@ -159,7 +159,7 @@ public abstract class SetTest {
             }
         }
         final CountingMatchListener listener = new CountingMatchListener();
-        final MatchListener performanceListener = new MatchListener() {
+        final SetMatchListener performanceListener = new SetMatchListener() {
 
             public boolean match(final int startPosition, final int endPosition) {
                 return true;

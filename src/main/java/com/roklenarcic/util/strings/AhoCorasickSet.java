@@ -159,7 +159,7 @@ public class AhoCorasickSet implements StringSet {
         root.mapEntries(fillOutRangeNodesVisitor);
     }
 
-    public void match(final String haystack, final MatchListener listener) {
+    public void match(final String haystack, final SetMatchListener listener) {
 
         // Start with the root node.
         TrieNode currentNode = root;
@@ -458,7 +458,7 @@ public class AhoCorasickSet implements StringSet {
         public abstract void mapEntries(final EntryVisitor visitor);
 
         // Report matches at this node. Use at matching.
-        public final boolean output(MatchListener listener, int idx) {
+        public final boolean output(SetMatchListener listener, int idx) {
             // since idx is the last character in the match
             // position it past the match (to be consistent with conventions)
             boolean ret = true;

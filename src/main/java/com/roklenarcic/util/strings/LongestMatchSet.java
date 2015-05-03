@@ -158,7 +158,7 @@ public class LongestMatchSet implements StringSet {
         root.mapEntries(fillOutRangeNodesVisitor);
     }
 
-    public void match(final String haystack, final MatchListener listener) {
+    public void match(final String haystack, final SetMatchListener listener) {
 
         // Start with the root node.
         TrieNode currentNode = root;
