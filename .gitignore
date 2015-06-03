@@ -1,0 +1,12 @@
+Thumbs.db
+target/
+[Bb]in/
+[Dd]ebug*/
+build/
+nbproject/
+build.xml
+lib/
+/\.settings
+/\.project
+\.classpath
+

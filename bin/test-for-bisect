@@ -1,0 +1,7 @@
+#!/bin/bash
+
+set -eu -o pipefail
+cd $(dirname $(dirname $0))
+
+mvn clean test-compile
+echo -e "\n" | mvn exec:java -Dexec.mainClass="com.roklenarcic.util.strings.$1" -Dexec.classpathScope="test"

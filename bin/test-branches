@@ -1,0 +1,18 @@
+#!/bin/bash
+
+set -eu -o pipefail
+cd $(dirname $(dirname $0))
+
+echo -e "Testing branch $1\n"
+
+git checkout $1
+
+mvn -q clean test-compile
+echo -e "\n" | mvn -q exec:java -Dexec.mainClass="com.roklenarcic.util.strings.$3" -Dexec.classpathScope="test"
+
+echo -e "\nTesing branch $2\n"
+
+git checkout $2
+
+mvn -q clean test-compile
+echo -e "\n" | mvn -q exec:java -Dexec.mainClass="com.roklenarcic.util.strings.$3" -Dexec.classpathScope="test"
