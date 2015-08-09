@@ -9,12 +9,26 @@ class Queue<T> {
         return first == last;
     }
 
+    @SuppressWarnings("unchecked")
+    public T peek() {
+        if (!isEmpty()) {
+            if (last - 1 < 0) {
+                return (T) arr[arr.length - 1];
+            } else {
+                return (T) arr[last - 1];
+            }
+        } else {
+            return null;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
     public T pop() {
         if (!isEmpty()) {
-            @SuppressWarnings("unchecked")
-            T ret = (T) arr[first];
-            first = ++first % arr.length;
-            return ret;
+            if (--last < 0) {
+                last = arr.length - 1;
+            }
+            return (T) arr[last];
         } else {
             return null;
         }
@@ -39,6 +53,17 @@ class Queue<T> {
         }
         arr[last] = n;
         last = ++last % arr.length;
+    }
+
+    public T take() {
+        if (!isEmpty()) {
+            @SuppressWarnings("unchecked")
+            T ret = (T) arr[first];
+            first = ++first % arr.length;
+            return ret;
+        } else {
+            return null;
+        }
     }
 
 }

@@ -15,7 +15,6 @@ class WholeWordMatchMap<T> implements StringMap<T> {
     private boolean caseSensitive = true;
     private int charBufferSize = 0;
     private TrieNode<T> root;
-    private Thresholder thresholdStrategy;
     private boolean[] wordChars;
 
     // Set where digits and letters, '-' and '_' are considered word characters.
@@ -245,10 +244,9 @@ class WholeWordMatchMap<T> implements StringMap<T> {
     }
 
     private void init(final Iterable<String> keywords, final Iterable<? extends T> values, boolean caseSensitive, boolean[] wordChars,
-            Thresholder thresholdStrategy) {
+            final Thresholder thresholdStrategy) {
         Iterator<String> keywordsIter = keywords.iterator();
         Iterator<? extends T> valuesIter = values.iterator();
-        this.thresholdStrategy = thresholdStrategy;
         this.wordChars = wordChars;
         int longestKeyword = 0;
         // Create the root node
@@ -285,40 +283,42 @@ class WholeWordMatchMap<T> implements StringMap<T> {
             }
         }
         charBufferSize = longestKeyword > 2048 ? longestKeyword * 2 : 4096;
-        // Go through nodes depth first, swap any hashmap nodes,
+        // Go through nodes breadth first, swap any hashmap nodes,
         // whose size is close to the size of range of keys with
         // flat array based nodes.
-        root = optimizeNodes(root, 0);
-    }
 
-    // A recursive function that replaces hashmap nodes with range nodes
-    // when appropriate.
-    private final TrieNode<T> optimizeNodes(TrieNode<T> n, int level) {
-        if (n instanceof HashmapNode) {
-            HashmapNode<T> node = (HashmapNode<T>) n;
-            char minKey = '\uffff';
-            char maxKey = 0;
-            // Find you the min and max key on the node.
-            int size = node.numEntries;
-            for (int i = 0; i < node.children.length; i++) {
-                if (node.children[i] != null) {
-                    node.children[i] = optimizeNodes(node.children[i], level + 1);
-                    if (node.keys[i] > maxKey) {
-                        maxKey = node.keys[i];
-                    }
-                    if (node.keys[i] < minKey) {
-                        minKey = node.keys[i];
-                    }
-                }
+        // Calculate fail transitions and add suffix matches to nodes.
+        // A lot of these properties are defined in a recursive fashion i.e.
+        // calculating for a 3 letter word requires having done the calculation
+        // for all 2 letter words.
+        //
+        final Queue<TrieNode<T>> queue = new Queue<TrieNode<T>>();
+        root = root.optimizeNode(0, thresholdStrategy);
+        queue.push(root);
+        queue.push(null);
+        // Need to use array to get mutateable state for anonymous class
+        final int[] level = new int[] { 1 };
+
+        EntryVisitor<T> optimizeNodesVisitor = new EntryVisitor<T>() {
+
+            public void visit(TrieNode<T> parent, char key, TrieNode<T> value) {
+                // First optimize node
+                value = value.optimizeNode(level[0], thresholdStrategy);
+                parent.updateTransition(key, value);
             }
-            // If difference between min and max key are small
-            // or only slightly larger than number of entries, use a range node
-            int keyIntervalSize = maxKey - minKey + 1;
-            if (thresholdStrategy.isOverThreshold(size, level, keyIntervalSize)) {
-                return new RangeNode<T>(node, minKey, maxKey);
+        };
+        while (!queue.isEmpty()) {
+            TrieNode<T> n = queue.take();
+            if (n == null) {
+                if (!queue.isEmpty()) {
+                    queue.push(null);
+                    level[0]++;
+                }
+            } else {
+                n.mapEntries(optimizeNodesVisitor);
             }
         }
-        return n;
+
     }
 
     private boolean scroll(Readable haystack, CharBuffer buf, boolean wordChars, boolean caseSensitive) throws IOException {
@@ -335,6 +335,10 @@ class WholeWordMatchMap<T> implements StringMap<T> {
             }
             buf.flip();
         } while (true);
+    }
+
+    private interface EntryVisitor<T> {
+        void visit(TrieNode<T> parent, char key, TrieNode<T> value);
     }
 
     // An open addressing hashmap implementation with linear probing
@@ -379,6 +383,58 @@ class WholeWordMatchMap<T> implements StringMap<T> {
         @Override
         public boolean isEmpty() {
             return numEntries == 0;
+        }
+
+        @Override
+        public void mapEntries(EntryVisitor<T> visitor) {
+            for (int i = 0; i < keys.length; i++) {
+                if (children[i] != null) {
+                    visitor.visit(this, keys[i], children[i]);
+                }
+            }
+        }
+
+        @Override
+        public void updateTransition(char c, TrieNode<T> node) {
+            int defaultSlot = hash(c) & modulusMask;
+            int currentSlot = defaultSlot;
+            do {
+                if (children[currentSlot] == null) {
+                    throw new IllegalArgumentException("Transition for " + c + " doesn't exist.");
+                } else if (keys[currentSlot] == c) {
+                    children[currentSlot] = node;
+                    return;
+                } else {
+                    currentSlot = ++currentSlot & modulusMask;
+                }
+            } while (currentSlot != defaultSlot);
+            throw new IllegalArgumentException("Transition for " + c + " doesn't exist.");
+        }
+
+        @Override
+        protected TrieNode<T> optimizeNode(int level, Thresholder thresholdStrategy) {
+            char minKey = '\uffff';
+            char maxKey = 0;
+            // Find you the min and max key on the node.
+            int size = numEntries;
+            for (int i = 0; i < children.length; i++) {
+                if (children[i] != null) {
+                    if (keys[i] > maxKey) {
+                        maxKey = keys[i];
+                    }
+                    if (keys[i] < minKey) {
+                        minKey = keys[i];
+                    }
+                }
+            }
+            // If difference between min and max key are small
+            // or only slightly larger than number of entries, use a range node
+            int keyIntervalSize = maxKey - minKey + 1;
+            if (thresholdStrategy.isOverThreshold(size, level, keyIntervalSize)) {
+                return new RangeNode<T>(this, minKey, maxKey);
+            } else {
+                return this;
+            }
         }
 
         // Double the capacity of the node, calculate the new mask,
@@ -501,6 +557,34 @@ class WholeWordMatchMap<T> implements StringMap<T> {
             return size == 0;
         }
 
+        @Override
+        public void mapEntries(EntryVisitor<T> visitor) {
+            if (children != null) {
+                for (int i = 0; i < children.length; i++) {
+                    if (children[i] != null && children[i] != this) {
+                        visitor.visit(this, (char) (baseChar + i), children[i]);
+                    }
+                }
+            }
+        }
+
+        @Override
+        public void updateTransition(char c, TrieNode<T> node) {
+            // First check if the key is between max and min value.
+            // Here we use the fact that char type is unsigned to figure it out
+            // with a single condition.
+            int idx = (char) (c - baseChar);
+            if (idx < size) {
+                if (children[idx] != null) {
+                    children[idx] = node;
+                    return;
+                } else {
+                    throw new IllegalArgumentException("Transition for " + c + " doesn't exist.");
+                }
+            }
+            throw new IllegalArgumentException("Transition for " + c + " doesn't exist.");
+        }
+
     }
 
     // Basic node for both
@@ -516,6 +600,13 @@ class WholeWordMatchMap<T> implements StringMap<T> {
 
         public abstract boolean isEmpty();
 
+        public abstract void mapEntries(final EntryVisitor<T> visitor);
+
+        public abstract void updateTransition(char c, TrieNode<T> node);
+
+        protected TrieNode<T> optimizeNode(int level, Thresholder thresholdStrategy) {
+            return this;
+        }
     }
 
 }
