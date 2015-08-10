@@ -11,14 +11,13 @@ public class LongestMatchSet implements StringSet {
 
     private boolean caseSensitive = true;
     private TrieNode root;
-    private Thresholder thresholdStrategy;
 
     public LongestMatchSet(final Iterable<String> keywords, boolean caseSensitive) {
         this(keywords, caseSensitive, new RangeNodeThreshold());
     }
 
-    public LongestMatchSet(final Iterable<String> keywords, boolean caseSensitive, Thresholder thresholdStrategy) {
-        this.thresholdStrategy = thresholdStrategy;
+    public LongestMatchSet(final Iterable<String> keywords, boolean caseSensitive, final Thresholder thresholdStrategy) {
+        this.caseSensitive = caseSensitive;
         // Create the root node
         root = new HashmapNode(true, 0);
         // Add all keywords
@@ -37,21 +36,29 @@ public class LongestMatchSet implements StringSet {
                 currentNode.matchLength = keyword.length();
             }
         }
-        // Go through nodes depth first, swap any hashmap nodes,
+        // Go through nodes breadth first, swap any hashmap nodes,
         // whose size is close to the size of range of keys with
         // flat array based nodes.
-        root = optimizeNodes(root, 0);
 
         // Calculate fail transitions and add suffix matches to nodes.
         // A lot of these properties are defined in a recursive fashion i.e.
         // calculating for a 3 letter word requires having done the calculation
         // for all 2 letter words.
         //
-        // Setup a queue to enable breath-first processing.
         final Queue<TrieNode> queue = new Queue<TrieNode>();
+        root = root.optimizeNode(0, thresholdStrategy);
+        queue.push(root);
+        queue.push(null);
+        // Need to use array to get mutateable state for anonymous class
+        final int[] level = new int[] { 1 };
+
         EntryVisitor failTransAndOutputsVisitor = new EntryVisitor() {
 
             public void visit(TrieNode parent, char key, TrieNode value) {
+                // First optimize node
+                value = value.optimizeNode(level[0], thresholdStrategy);
+                parent.updateTransition(key, value);
+
                 // Get fail transiton of the parent.
                 TrieNode parentFail = parent.getFailTransition();
                 // Since root node has null fail transition, first level nodes have null parentFail.
@@ -119,27 +126,43 @@ public class LongestMatchSet implements StringSet {
             }
 
         };
-        root.mapEntries(failTransAndOutputsVisitor);
         while (!queue.isEmpty()) {
-            queue.pop().mapEntries(failTransAndOutputsVisitor);
+            TrieNode n = queue.take();
+            if (n == null) {
+                if (!queue.isEmpty()) {
+                    queue.push(null);
+                    level[0]++;
+                }
+            } else {
+                n.mapEntries(failTransAndOutputsVisitor);
+            }
         }
+
         // Range nodes represent a range of transitions without all the transitions in the range being
         // there. In case of hitting on an empty slot the logic in match loop runs down the fail transition
         // chain to find a node with a transition for that char. Instead of wasting space on empty slots
         // we can do that beforehand and add that transition to the node. We need to do that in depth first
         // fashion, otherwise an endless loop can form.
-        EntryVisitor fillOutRangeNodesVisitor = new EntryVisitor() {
+        EntryVisitor enqueueNodesVisitor = new EntryVisitor() {
 
             public void visit(TrieNode parent, char key, TrieNode value) {
                 // go depth first
                 if (!value.isEmpty()) {
-                    value.mapEntries(this);
+                    queue.push(value);
                 }
-                if (value instanceof RangeNode) {
+            }
+
+        };
+        root.mapEntries(enqueueNodesVisitor);
+        while (!queue.isEmpty()) {
+            TrieNode node = queue.pop();
+            if (node == null) {
+                node = queue.pop();
+                if (node instanceof RangeNode) {
                     // Range nodes have gaps (null values) in their array. We can put this wasted
                     // memory to work by filling these gaps with the correct next node for that character
                     // which we can figure out by following failure transitions.
-                    RangeNode rangeNode = (RangeNode) value;
+                    RangeNode rangeNode = (RangeNode) node;
                     for (int i = 0; i < rangeNode.size; i++) {
                         if (rangeNode.children[i] == null) {
                             char charOfMissingTransition = (char) (rangeNode.baseChar + i);
@@ -159,10 +182,11 @@ public class LongestMatchSet implements StringSet {
                         }
                     }
                 }
+            } else {
+                queue.push(null);
+                node.mapEntries(enqueueNodesVisitor);
             }
-
-        };
-        root.mapEntries(fillOutRangeNodesVisitor);
+        }
     }
 
     public void match(final String haystack, final SetMatchListener listener) {
@@ -240,36 +264,6 @@ public class LongestMatchSet implements StringSet {
         }
     }
 
-    // A recursive function that replaces hashmap nodes with range nodes
-    // when appropriate.
-    private final TrieNode optimizeNodes(TrieNode n, int level) {
-        if (n instanceof HashmapNode) {
-            HashmapNode node = (HashmapNode) n;
-            char minKey = '\uffff';
-            char maxKey = 0;
-            // Find you the min and max key on the node.
-            int size = node.numEntries;
-            for (int i = 0; i < node.children.length; i++) {
-                if (node.children[i] != null) {
-                    node.children[i] = optimizeNodes(node.children[i], level + 1);
-                    if (node.keys[i] > maxKey) {
-                        maxKey = node.keys[i];
-                    }
-                    if (node.keys[i] < minKey) {
-                        minKey = node.keys[i];
-                    }
-                }
-            }
-            // If difference between min and max key are small
-            // or only slightly larger than number of entries, use a range node
-            int keyIntervalSize = maxKey - minKey + 1;
-            if (thresholdStrategy.isOverThreshold(size, level, keyIntervalSize)) {
-                return new RangeNode(node, minKey, maxKey);
-            }
-        }
-        return n;
-    }
-
     private interface EntryVisitor {
         void visit(TrieNode parent, char key, TrieNode value);
     }
@@ -318,6 +312,49 @@ public class LongestMatchSet implements StringSet {
                 if (children[i] != null) {
                     visitor.visit(this, keys[i], children[i]);
                 }
+            }
+        }
+
+        @Override
+        public void updateTransition(char c, TrieNode node) {
+            int defaultSlot = hash(c) & modulusMask;
+            int currentSlot = defaultSlot;
+            do {
+                if (children[currentSlot] == null) {
+                    throw new IllegalArgumentException("Transition for " + c + " doesn't exist.");
+                } else if (keys[currentSlot] == c) {
+                    children[currentSlot] = node;
+                    return;
+                } else {
+                    currentSlot = ++currentSlot & modulusMask;
+                }
+            } while (currentSlot != defaultSlot);
+            throw new IllegalArgumentException("Transition for " + c + " doesn't exist.");
+        }
+
+        @Override
+        protected TrieNode optimizeNode(int level, Thresholder thresholdStrategy) {
+            char minKey = '\uffff';
+            char maxKey = 0;
+            // Find you the min and max key on the node.
+            int size = numEntries;
+            for (int i = 0; i < children.length; i++) {
+                if (children[i] != null) {
+                    if (keys[i] > maxKey) {
+                        maxKey = keys[i];
+                    }
+                    if (keys[i] < minKey) {
+                        minKey = keys[i];
+                    }
+                }
+            }
+            // If difference between min and max key are small
+            // or only slightly larger than number of entries, use a range node
+            int keyIntervalSize = maxKey - minKey + 1;
+            if (thresholdStrategy.isOverThreshold(size, level, keyIntervalSize)) {
+                return new RangeNode(this, minKey, maxKey);
+            } else {
+                return this;
             }
         }
 
@@ -448,6 +485,23 @@ public class LongestMatchSet implements StringSet {
             }
         }
 
+        @Override
+        public void updateTransition(char c, TrieNode node) {
+            // First check if the key is between max and min value.
+            // Here we use the fact that char type is unsigned to figure it out
+            // with a single condition.
+            int idx = (char) (c - baseChar);
+            if (idx < size) {
+                if (children[idx] != null) {
+                    children[idx] = node;
+                    return;
+                } else {
+                    throw new IllegalArgumentException("Transition for " + c + " doesn't exist.");
+                }
+            }
+            throw new IllegalArgumentException("Transition for " + c + " doesn't exist.");
+        }
+
     }
 
     // Basic node for both
@@ -494,6 +548,12 @@ public class LongestMatchSet implements StringSet {
                     suffixMatch = suffixMatch.suffixMatch;
                 }
             }
+        }
+
+        public abstract void updateTransition(char c, TrieNode node);
+
+        protected TrieNode optimizeNode(int level, Thresholder thresholdStrategy) {
+            return this;
         }
     }
 

@@ -103,6 +103,9 @@ public abstract class MapTest {
     public void testLongKeywords() throws IOException {
         final String[] keywords = Generator.repeating(100, "a");
         test(keywords[keywords.length - 1], keywords);
+        // char[] longKeyword = new char[10000];
+        // Arrays.fill(longKeyword, 'a');
+        // instantiateMap(Arrays.asList(new String(longKeyword)), true);
     }
 
     @Test
@@ -143,7 +146,9 @@ public abstract class MapTest {
 
     private void test(final String haystack, final String... needles) throws IOException {
         final List<String> keywords = prepareKeywords(needles);
+        long constructionStart = System.nanoTime();
         final StringMap<String> map = instantiateMap(keywords, true);
+        System.out.println("Cons: " + (System.nanoTime() - constructionStart));
         System.gc();
         try {
             Thread.sleep(500);
