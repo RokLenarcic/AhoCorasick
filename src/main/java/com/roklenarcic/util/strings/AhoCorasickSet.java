@@ -20,6 +20,7 @@ public class AhoCorasickSet implements StringSet {
     public AhoCorasickSet(final Iterable<String> keywords, boolean caseSensitive, final Thresholder thresholdStrategy) {
         // Create the root node
         root = new HashmapNode(true);
+        this.caseSensitive = caseSensitive;
         // Add all keywords
         for (String keyword : keywords) {
             // Skip any empty keywords

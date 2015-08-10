@@ -21,6 +21,7 @@ public class LongestMatchMap<T> implements StringMap<T> {
     }
 
     public LongestMatchMap(final Iterable<String> keywords, final Iterable<? extends T> values, boolean caseSensitive, final Thresholder thresholdStrategy) {
+        this.caseSensitive = caseSensitive;
         Iterator<String> keywordsIter = keywords.iterator();
         Iterator<? extends T> valuesIter = values.iterator();
         int longestKeyword = 0;

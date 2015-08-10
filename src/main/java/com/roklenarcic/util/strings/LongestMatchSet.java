@@ -17,6 +17,7 @@ public class LongestMatchSet implements StringSet {
     }
 
     public LongestMatchSet(final Iterable<String> keywords, boolean caseSensitive, final Thresholder thresholdStrategy) {
+        this.caseSensitive = caseSensitive;
         // Create the root node
         root = new HashmapNode(true, 0);
         // Add all keywords

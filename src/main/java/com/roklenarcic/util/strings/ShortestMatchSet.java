@@ -16,6 +16,7 @@ public class ShortestMatchSet implements StringSet {
     }
 
     public ShortestMatchSet(final Iterable<String> keywords, boolean caseSensitive, final Thresholder thresholdStrategy) {
+        this.caseSensitive = caseSensitive;
         // Create the root node
         root = new HashmapNode(true);
         // Add all keywords

@@ -102,6 +102,9 @@ public abstract class SetTest {
     public void testLongKeywords() {
         final String[] keywords = Generator.repeating(100, "a");
         test(keywords[keywords.length - 1], keywords);
+        // char[] longKeyword = new char[10000];
+        // Arrays.fill(longKeyword, 'a');
+        // instantiateSet(Arrays.asList(new String(longKeyword)), true);
     }
 
     @Test

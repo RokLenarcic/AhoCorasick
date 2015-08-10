@@ -103,6 +103,9 @@ public abstract class MapTest {
     public void testLongKeywords() throws IOException {
         final String[] keywords = Generator.repeating(100, "a");
         test(keywords[keywords.length - 1], keywords);
+        // char[] longKeyword = new char[10000];
+        // Arrays.fill(longKeyword, 'a');
+        // instantiateMap(Arrays.asList(new String(longKeyword)), true);
     }
 
     @Test

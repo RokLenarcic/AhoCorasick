@@ -24,6 +24,7 @@ public class AhoCorasickMap<T> implements StringMap<T> {
     public AhoCorasickMap(final Iterable<String> keywords, final Iterable<? extends T> values, boolean caseSensitive, final Thresholder thresholdStrategy) {
         Iterator<String> keywordsIter = keywords.iterator();
         Iterator<? extends T> valuesIter = values.iterator();
+        this.caseSensitive = caseSensitive;
         // Create the root node
         root = new HashmapNode<T>(true);
         // Add all keywords

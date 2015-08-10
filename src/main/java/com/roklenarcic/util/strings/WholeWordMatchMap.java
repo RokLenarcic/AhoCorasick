@@ -245,6 +245,7 @@ class WholeWordMatchMap<T> implements StringMap<T> {
 
     private void init(final Iterable<String> keywords, final Iterable<? extends T> values, boolean caseSensitive, boolean[] wordChars,
             final Thresholder thresholdStrategy) {
+        this.caseSensitive = caseSensitive;
         Iterator<String> keywordsIter = keywords.iterator();
         Iterator<? extends T> valuesIter = values.iterator();
         this.wordChars = wordChars;

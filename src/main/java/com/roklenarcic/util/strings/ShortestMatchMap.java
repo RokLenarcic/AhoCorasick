@@ -21,6 +21,7 @@ public class ShortestMatchMap<T> implements StringMap<T> {
     }
 
     public ShortestMatchMap(final Iterable<String> keywords, final Iterable<? extends T> values, boolean caseSensitive, final Thresholder thresholdStrategy) {
+        this.caseSensitive = caseSensitive;
         Iterator<String> keywordsIter = keywords.iterator();
         Iterator<? extends T> valuesIter = values.iterator();
         // Create the root node

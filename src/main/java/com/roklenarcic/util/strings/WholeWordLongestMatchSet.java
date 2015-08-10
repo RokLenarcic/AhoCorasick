@@ -9,7 +9,6 @@ class WholeWordLongestMatchSet implements StringSet {
 
     private boolean caseSensitive = true;
     private TrieNode root;
-    private Thresholder thresholdStrategy;
     private boolean[] wordChars;
 
     // Set where digits and letters, '-' and '_' are considered word characters.
@@ -182,8 +181,8 @@ class WholeWordLongestMatchSet implements StringSet {
         return wordChars;
     }
 
-    private void init(final Iterable<String> keywords, boolean caseSensitive, final boolean[] wordChars, Thresholder thresholdStrategy) {
-        this.thresholdStrategy = thresholdStrategy;
+    private void init(final Iterable<String> keywords, boolean caseSensitive, final boolean[] wordChars, final Thresholder thresholdStrategy) {
+        this.caseSensitive = caseSensitive;
         this.wordChars = wordChars;
         // Create the root node
         root = new HashmapNode();
@@ -206,68 +205,58 @@ class WholeWordLongestMatchSet implements StringSet {
                 }
             }
         }
-        // Go through nodes depth first, swap any hashmap nodes,
+        // Go through nodes breadth first, swap any hashmap nodes,
         // whose size is close to the size of range of keys with
         // flat array based nodes.
-        root = optimizeNodes(root, 0);
-        // Fill the fail match variables. We do that by carrying the last match up the tree
-        // and increasing the offset.
-        root.mapEntries(new EntryVisitor() {
 
-            private int failMatchLength = 0;
-            private int failMatchOffset = 0;
+        // Calculate fail transitions and add suffix matches to nodes.
+        // A lot of these properties are defined in a recursive fashion i.e.
+        // calculating for a 3 letter word requires having done the calculation
+        // for all 2 letter words.
+        //
+        final Queue<TrieNode> queue = new Queue<TrieNode>();
+        root = root.optimizeNode(0, thresholdStrategy);
+        queue.push(root);
+        queue.push(null);
+        // Need to use array to get mutateable state for anonymous class
+        final int[] level = new int[] { 1 };
+
+        EntryVisitor optimizeNodesAndFailTransitions = new EntryVisitor() {
 
             public void visit(TrieNode parent, char key, TrieNode value) {
-                // We save the state so we can restore it later. It's a poor man's stack.
-                int length = failMatchLength;
-                int offset = failMatchOffset;
+                // First optimize node
+                value = value.optimizeNode(level[0], thresholdStrategy);
+                parent.updateTransition(key, value);
+                // Fill the fail match variables. We do that by carrying the last match up the tree
+                // and increasing the offset.
                 // If the 'parent' node has a match and the transition is a non-word character
                 // we carry that match as a fail match to children after that transition.
                 if (parent.matchLength != 0 && !wordChars[key]) {
-                    failMatchLength = parent.matchLength;
-                    failMatchOffset = 1;
+                    value.failMatchLength = parent.matchLength;
+                    value.failMatchOffset = 1;
                 } else {
-                    failMatchOffset++;
+                    value.failMatchLength = parent.failMatchLength;
+                    value.failMatchOffset = parent.failMatchOffset + 1;
                 }
-                value.failMatchLength = failMatchLength;
-                value.failMatchOffset = failMatchOffset;
-                value.mapEntries(this);
-                // Reset the state before exiting.
-                failMatchLength = length;
-                failMatchOffset = offset;
+                // Queue the non-leaf node.
+                if (!value.isEmpty()) {
+                    queue.push(value);
+                }
 
             }
-        });
-    }
-
-    // A recursive function that replaces hashmap nodes with range nodes
-    // when appropriate.
-    private final TrieNode optimizeNodes(TrieNode n, int level) {
-        if (n instanceof HashmapNode) {
-            HashmapNode node = (HashmapNode) n;
-            char minKey = '\uffff';
-            char maxKey = 0;
-            // Find you the min and max key on the node.
-            int size = node.numEntries;
-            for (int i = 0; i < node.children.length; i++) {
-                if (node.children[i] != null) {
-                    node.children[i] = optimizeNodes(node.children[i], level + 1);
-                    if (node.keys[i] > maxKey) {
-                        maxKey = node.keys[i];
-                    }
-                    if (node.keys[i] < minKey) {
-                        minKey = node.keys[i];
-                    }
+        };
+        while (!queue.isEmpty()) {
+            TrieNode n = queue.take();
+            if (n == null) {
+                if (!queue.isEmpty()) {
+                    queue.push(null);
+                    level[0]++;
                 }
-            }
-            // If difference between min and max key are small
-            // or only slightly larger than number of entries, use a range node
-            int keyIntervalSize = maxKey - minKey + 1;
-            if (thresholdStrategy.isOverThreshold(size, level, keyIntervalSize)) {
-                return new RangeNode(node, minKey, maxKey);
+            } else {
+                n.mapEntries(optimizeNodesAndFailTransitions);
             }
         }
-        return n;
+
     }
 
     private interface EntryVisitor {
@@ -323,6 +312,49 @@ class WholeWordLongestMatchSet implements StringSet {
                 if (children[i] != null) {
                     visitor.visit(this, keys[i], children[i]);
                 }
+            }
+        }
+
+        @Override
+        public void updateTransition(char c, TrieNode node) {
+            int defaultSlot = hash(c) & modulusMask;
+            int currentSlot = defaultSlot;
+            do {
+                if (children[currentSlot] == null) {
+                    throw new IllegalArgumentException("Transition for " + c + " doesn't exist.");
+                } else if (keys[currentSlot] == c) {
+                    children[currentSlot] = node;
+                    return;
+                } else {
+                    currentSlot = ++currentSlot & modulusMask;
+                }
+            } while (currentSlot != defaultSlot);
+            throw new IllegalArgumentException("Transition for " + c + " doesn't exist.");
+        }
+
+        @Override
+        protected TrieNode optimizeNode(int level, Thresholder thresholdStrategy) {
+            char minKey = '\uffff';
+            char maxKey = 0;
+            // Find you the min and max key on the node.
+            int size = numEntries;
+            for (int i = 0; i < children.length; i++) {
+                if (children[i] != null) {
+                    if (keys[i] > maxKey) {
+                        maxKey = keys[i];
+                    }
+                    if (keys[i] < minKey) {
+                        minKey = keys[i];
+                    }
+                }
+            }
+            // If difference between min and max key are small
+            // or only slightly larger than number of entries, use a range node
+            int keyIntervalSize = maxKey - minKey + 1;
+            if (thresholdStrategy.isOverThreshold(size, level, keyIntervalSize)) {
+                return new RangeNode(this, minKey, maxKey);
+            } else {
+                return this;
             }
         }
 
@@ -454,6 +486,23 @@ class WholeWordLongestMatchSet implements StringSet {
             }
         }
 
+        @Override
+        public void updateTransition(char c, TrieNode node) {
+            // First check if the key is between max and min value.
+            // Here we use the fact that char type is unsigned to figure it out
+            // with a single condition.
+            int idx = (char) (c - baseChar);
+            if (idx < size) {
+                if (children[idx] != null) {
+                    children[idx] = node;
+                    return;
+                } else {
+                    throw new IllegalArgumentException("Transition for " + c + " doesn't exist.");
+                }
+            }
+            throw new IllegalArgumentException("Transition for " + c + " doesn't exist.");
+        }
+
     }
 
     // Basic node for both
@@ -471,6 +520,12 @@ class WholeWordLongestMatchSet implements StringSet {
         public abstract boolean isEmpty();
 
         public abstract void mapEntries(final EntryVisitor visitor);
+
+        public abstract void updateTransition(char c, TrieNode node);
+
+        protected TrieNode optimizeNode(int level, Thresholder thresholdStrategy) {
+            return this;
+        }
 
     }
 

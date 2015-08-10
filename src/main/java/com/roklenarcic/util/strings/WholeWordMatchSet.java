@@ -136,6 +136,7 @@ class WholeWordMatchSet implements StringSet {
     }
 
     private void init(final Iterable<String> keywords, boolean caseSensitive, boolean[] wordChars, final Thresholder thresholdStrategy) {
+        this.caseSensitive = caseSensitive;
         this.wordChars = wordChars;
         // Create the root node
         root = new HashmapNode();
