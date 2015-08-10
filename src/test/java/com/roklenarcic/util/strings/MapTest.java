@@ -143,7 +143,9 @@ public abstract class MapTest {
 
     private void test(final String haystack, final String... needles) throws IOException {
         final List<String> keywords = prepareKeywords(needles);
+        long constructionStart = System.nanoTime();
         final StringMap<String> map = instantiateMap(keywords, true);
+        System.out.println("Cons: " + (System.nanoTime() - constructionStart));
         System.gc();
         try {
             Thread.sleep(500);

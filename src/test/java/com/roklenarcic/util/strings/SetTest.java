@@ -141,7 +141,9 @@ public abstract class SetTest {
 
     private void test(final String haystack, final String... needles) {
         final List<String> keywords = prepareKeywords(needles);
+        long constructionStart = System.nanoTime();
         final StringSet set = instantiateSet(keywords, true);
+        System.out.println("Cons: " + (System.nanoTime() - constructionStart));
         System.gc();
         try {
             Thread.sleep(500);
