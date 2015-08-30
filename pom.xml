@@ -4,7 +4,7 @@
 
   <groupId>com.github.roklenarcic</groupId>
   <artifactId>aho-corasick</artifactId>
-  <version>1.0</version>
+  <version>1.1</version>
   <packaging>jar</packaging>
   <name>Aho-Corasick and related multi-string searches</name>
   <description>Java library for matching against large dictionaries of strings</description>
