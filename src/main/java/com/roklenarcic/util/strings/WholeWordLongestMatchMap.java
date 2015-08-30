@@ -9,7 +9,7 @@ import com.roklenarcic.util.strings.threshold.Thresholder;
 
 // A set that matches only whole word matches. Non-word characters are user defined (with a default).
 // Any non-word characters around input strings get trimmed. Non-word characters are allowed in the keywords.
-class WholeWordLongestMatchMap<T> implements StringMap<T> {
+public class WholeWordLongestMatchMap<T> implements StringMap<T> {
 
     private boolean caseSensitive = true;
     private int charBufferSize = 0;

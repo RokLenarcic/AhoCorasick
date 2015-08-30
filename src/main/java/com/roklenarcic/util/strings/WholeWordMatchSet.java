@@ -6,7 +6,7 @@ import com.roklenarcic.util.strings.threshold.Thresholder;
 // A set that matches only whole word matches. Non-word characters are user defined (with a default).
 // Any non-word characters around input strings get trimmed. Non-word characters not allowed in the keywords
 // and they will produce an IllegalArgumentException.
-class WholeWordMatchSet implements StringSet {
+public class WholeWordMatchSet implements StringSet {
 
     private boolean caseSensitive = true;
     private TrieNode root;
