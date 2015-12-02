@@ -238,7 +238,7 @@ public class AhoCorasickMap<T> implements StringMap<T> {
                     currentNode = nextNode;
                     // Output any matches on the current node and increase the index
                     if (!currentNode.output(listener)) {
-                        break;
+                        return;
                     }
                 }
                 buf.clear();
@@ -266,7 +266,7 @@ public class AhoCorasickMap<T> implements StringMap<T> {
                     currentNode = nextNode;
                     // Output any matches on the current node and increase the index
                     if (!currentNode.output(listener)) {
-                        break;
+                        return;
                     }
                 }
                 buf.clear();

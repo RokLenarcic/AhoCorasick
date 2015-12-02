@@ -222,7 +222,7 @@ public class ShortestMatchMap<T> implements StringMap<T> {
                         // anything,
                         // so continue matching from the root.
                         if (!listener.match(currentNodeMatchValue)) {
-                            break;
+                            return;
                         }
                         currentNode = root.getTransition(c);
                     } else {
@@ -243,7 +243,9 @@ public class ShortestMatchMap<T> implements StringMap<T> {
                 // we need to output a potential match after the loop.
                 if (currentNodeMatchLength != 0) {
                     // Output any matches on the last node
-                    listener.match(currentNodeMatchValue);
+                    if (!listener.match(currentNodeMatchValue)) {
+                        return;
+                    }
                 }
             }
         } else {
@@ -259,7 +261,7 @@ public class ShortestMatchMap<T> implements StringMap<T> {
                         // anything,
                         // so continue matching from the root.
                         if (!listener.match(currentNodeMatchValue)) {
-                            break;
+                            return;
                         }
                         currentNode = root.getTransition(c);
                     } else {
@@ -280,7 +282,9 @@ public class ShortestMatchMap<T> implements StringMap<T> {
                 // we need to output a potential match after the loop.
                 if (currentNodeMatchLength != 0) {
                     // Output any matches on the last node
-                    listener.match(currentNodeMatchValue);
+                    if (!listener.match(currentNodeMatchValue)) {
+                        return;
+                    }
                 }
             }
         }
