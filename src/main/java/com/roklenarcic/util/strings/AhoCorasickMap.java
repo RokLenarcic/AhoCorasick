@@ -22,16 +22,19 @@ public class AhoCorasickMap<T> implements StringMap<T> {
     }
 
     public AhoCorasickMap(final Iterable<String> keywords, final Iterable<? extends T> values, boolean caseSensitive, final Thresholder thresholdStrategy) {
-        Iterator<String> keywordsIter = keywords.iterator();
-        Iterator<? extends T> valuesIter = values.iterator();
+    	this(new KeyValueIterator<T>(keywords, values), caseSensitive, thresholdStrategy);
+    }
+    
+    protected AhoCorasickMap(final Iterator<KeyValue<T>> keyValuePairs, boolean caseSensitive, final Thresholder thresholdStrategy) {
         this.caseSensitive = caseSensitive;
         // Create the root node
         root = new HashmapNode<T>(true);
         // Add all keywords
         int longestKeyword = 0;
-        while (keywordsIter.hasNext() && valuesIter.hasNext()) {
-            final String keyword = keywordsIter.next();
-            T value = valuesIter.next();
+        while(keyValuePairs.hasNext()) {
+        	final KeyValue<T> keyValue = keyValuePairs.next();
+            final String keyword = keyValue.key;
+            final T value = keyValue.value;
             // Skip any empty keywords
             if (keyword != null && keyword.length() > 0) {
                 if (keyword.length() > longestKeyword) {
