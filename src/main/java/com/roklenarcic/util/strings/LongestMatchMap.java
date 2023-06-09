@@ -448,7 +448,7 @@ public class LongestMatchMap<T> implements StringMap<T> {
             // If difference between min and max key are small
             // or only slightly larger than number of entries, use a range node
             int keyIntervalSize = maxKey - minKey + 1;
-            if (thresholdStrategy.isOverThreshold(size, level, keyIntervalSize)) {
+            if (defaultTransition != null || thresholdStrategy.isOverThreshold(size, level, keyIntervalSize)) {
                 return new RangeNode<T>(this, minKey, maxKey);
             } else {
                 return this;

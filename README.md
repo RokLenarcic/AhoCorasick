@@ -7,7 +7,7 @@ Java Aho-Corasick implementation
     <dependency>
         <groupId>com.github.roklenarcic</groupId>
         <artifactId>aho-corasick</artifactId>
-        <version>1.1</version>
+        <version>1.2</version>
     </dependency>
 ```
 
@@ -21,7 +21,7 @@ Time complexity is `O(n+m)` where `n` is length of the input stream, and `m` is 
 
 ### Upsides of this implementation
 
-- It is Java 5 compatible (lots of people are still running this).
+- It is Java 7 compatible (lots of people are still running this).
 - It's very fast
 - It has a low memory footprint
 - Matching does no allocations, which means no GC churning
